@@ -19,12 +19,12 @@ func TestScore1() *Score {
 		Hub: Hub{
 			AutoFuel:         5,
 			TeleopFuel:       8,
-			AutoTowerLevel:   TowerLevel1,
-			TeleopTowerLevel: TowerLevel2,
 			IsActive:         true,
 		},
-		Fouls:     fouls,
-		PlayoffDq: false,
+		AutoStatuses:    [3]EndgameStatus{EndgameL1, EndgameNone, EndgameNone},
+		EndgameStatuses: [3]EndgameStatus{EndgameL2, EndgameL1, EndgameNone},
+		Fouls:           fouls,
+		PlayoffDq:       false,
 	}
 }
 
@@ -33,12 +33,12 @@ func TestScore2() *Score {
 		Hub: Hub{
 			AutoFuel:         2,
 			TeleopFuel:       10,
-			AutoTowerLevel:   TowerLevelNone,
-			TeleopTowerLevel: TowerLevel3,
 			IsActive:         true,
 		},
-		Fouls:     []Foul{},
-		PlayoffDq: false,
+		AutoStatuses:    [3]EndgameStatus{EndgameNone, EndgameNone, EndgameNone},
+		EndgameStatuses: [3]EndgameStatus{EndgameL3, EndgameL2, EndgameL1},
+		Fouls:           []Foul{},
+		PlayoffDq:       false,
 	}
 }
 

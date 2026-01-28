@@ -43,40 +43,6 @@ func TestHubTotalFuel(t *testing.T) {
 	assert.Equal(t, 10, hub.TotalFuel())
 }
 
-func TestHubAutoTowerPoints(t *testing.T) {
-	hub := &Hub{AutoTowerLevel: TowerLevel1}
-	assert.Equal(t, 15, hub.AutoTowerPoints())
-
-	hub.AutoTowerLevel = TowerLevel2
-	assert.Equal(t, 0, hub.AutoTowerPoints())
-
-	hub.AutoTowerLevel = TowerLevelNone
-	assert.Equal(t, 0, hub.AutoTowerPoints())
-}
-
-func TestHubTeleopTowerPoints(t *testing.T) {
-	hub := &Hub{TeleopTowerLevel: TowerLevel1}
-	assert.Equal(t, 10, hub.TeleopTowerPoints())
-
-	hub.TeleopTowerLevel = TowerLevel2
-	assert.Equal(t, 20, hub.TeleopTowerPoints())
-
-	hub.TeleopTowerLevel = TowerLevel3
-	assert.Equal(t, 30, hub.TeleopTowerPoints())
-
-	hub.TeleopTowerLevel = TowerLevelNone
-	assert.Equal(t, 0, hub.TeleopTowerPoints())
-}
-
-func TestHubTotalTowerPoints(t *testing.T) {
-	hub := &Hub{
-		AutoTowerLevel:   TowerLevel1,
-		TeleopTowerLevel: TowerLevel2,
-	}
-
-	assert.Equal(t, 35, hub.TotalTowerPoints())
-}
-
 func TestHubActivateDeactivate(t *testing.T) {
 	hub := NewHub()
 	assert.True(t, hub.IsActive)
@@ -114,30 +80,3 @@ func TestHubIsSupercharged(t *testing.T) {
 	assert.True(t, hub.IsSupercharged(45))
 }
 
-func TestHubMeetsTowerThreshold(t *testing.T) {
-	hub := &Hub{
-		AutoTowerLevel:   TowerLevel1,
-		TeleopTowerLevel: TowerLevel2,
-	}
-
-	// Total: 15 + 20 = 35
-	assert.True(t, hub.MeetsTowerThreshold(30))
-	assert.False(t, hub.MeetsTowerThreshold(40))
-	assert.True(t, hub.MeetsTowerThreshold(35))
-}
-
-func TestHubHasAutoTowerClimb(t *testing.T) {
-	hub := &Hub{AutoTowerLevel: TowerLevelNone}
-	assert.False(t, hub.HasAutoTowerClimb())
-
-	hub.AutoTowerLevel = TowerLevel1
-	assert.True(t, hub.HasAutoTowerClimb())
-}
-
-func TestHubHasTeleopTowerClimb(t *testing.T) {
-	hub := &Hub{TeleopTowerLevel: TowerLevelNone}
-	assert.False(t, hub.HasTeleopTowerClimb())
-
-	hub.TeleopTowerLevel = TowerLevel3
-	assert.True(t, hub.HasTeleopTowerClimb())
-}

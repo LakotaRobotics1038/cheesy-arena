@@ -53,11 +53,15 @@ type TbaAlliance struct {
 }
 
 type TbaScoreBreakdown struct {
+	AutoLineRobot1         string  `mapstructure:"autoLineRobot1"`
+	AutoLineRobot2         string  `mapstructure:"autoLineRobot2"`
+	AutoLineRobot3         string  `mapstructure:"autoLineRobot3"`
 	AutoFuel               int  `mapstructure:"autoFuel"`
 	TeleopFuel             int  `mapstructure:"teleopFuel"`
 	FuelPoints             int  `mapstructure:"fuelPoints"`
-	AutoTowerLevel         int  `mapstructure:"autoTowerLevel"`
-	TeleopTowerLevel       int  `mapstructure:"teleopTowerLevel"`
+	EndGameRobot1          string  `mapstructure:"endGameRobot1"`
+	EndGameRobot2          string  `mapstructure:"endGameRobot2"`
+	EndGameRobot3          string  `mapstructure:"endGameRobot3"`
 	TowerPoints            int  `mapstructure:"towerPoints"`
 	MatchPoints            int  `mapstructure:"matchPoints"`
 	EnergizedRankingPoint  bool `mapstructure:"energizedRankingPoint"`
@@ -125,6 +129,17 @@ type TbaPublishedAward struct {
 	Name    string `json:"name_str"`
 	TeamKey string `json:"team_key"`
 	Awardee string `json:"awardee"`
+}
+
+var leaveMapping = map[game.EndgameStatus]string{
+	game.EndgameNone:        "None",
+	game.EndgameL1:          "Level 1",
+}
+var endGameStatusMapping = map[game.EndgameStatus]string{
+	game.EndgameNone:        "None",
+	game.EndgameL1:          "Level 1",
+	game.EndgameL2:          "Level 2",
+	game.EndgameL3:          "Level 3",
 }
 
 func NewTbaClient(eventCode, secretId, secret string) *TbaClient {
@@ -611,11 +626,15 @@ func createTbaScoringBreakdown(
 
 
 	breakdown := TbaScoreBreakdown{
+		AutoLineRobot1:           leaveMapping[score.AutoStatuses[0]],
+		AutoLineRobot2:           leaveMapping[score.AutoStatuses[1]],
+		AutoLineRobot3:           leaveMapping[score.AutoStatuses[2]],
 		AutoFuel:                 score.Hub.AutoFuel,
 		TeleopFuel:               score.Hub.TeleopFuel,
 		FuelPoints:               scoreSummary.FuelPoints,
-		AutoTowerLevel:           int(score.Hub.AutoTowerLevel),
-		TeleopTowerLevel:         int(score.Hub.TeleopTowerLevel),
+		EndGameRobot1:            endGameStatusMapping[score.EndgameStatuses[0]],
+		EndGameRobot2:            endGameStatusMapping[score.EndgameStatuses[1]],
+		EndGameRobot3:            endGameStatusMapping[score.EndgameStatuses[2]],
 		TowerPoints:              scoreSummary.TowerPoints,
 		MatchPoints:              scoreSummary.MatchPoints,
 		EnergizedRankingPoint:    scoreSummary.EnergizedRankingPoint,

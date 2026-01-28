@@ -257,14 +257,16 @@ func generateInMatchTeamRearText(arena *Arena, isRed bool, countdown string) str
 			fuelThreshold = arena.EventSettings.SuperchargedFuelThreshold
 		}
 
-		// Get AUTO TOWER points from our alliance's hub
-		var hub *game.Hub
-		if isRed {
-			hub = redHub
-		} else {
-			hub = blueHub
+		// Get AUTO TOWER points from our alliance's score
+		score := &realtimeScore.CurrentScore
+
+		// Calculate auto tower points (15 pts for L1 in auto)
+		autoTowerPoints := 0
+		for _, status := range score.AutoStatuses {
+			if status == game.EndgameL1 {
+				autoTowerPoints += 15
+			}
 		}
-		autoTowerPoints := hub.AutoTowerPoints()
 
 		return fmt.Sprintf("%s %s F%d/%d T%d", countdown, shiftIndicator, totalFuel, fuelThreshold, autoTowerPoints)
 	} else {
@@ -290,20 +292,30 @@ func generateInMatchTimerRearText(arena *Arena, isRed bool) string {
 	if arena.CurrentMatch.Type == model.Qualification {
 		// Qualification: show FUEL and TOWER information
 		totalFuel := redScore.CurrentScore.Hub.TotalFuel() + blueScore.CurrentScore.Hub.TotalFuel()
-
-		var hub *game.Hub
+		var score *game.Score
 		if isRed {
-			hub = &redScore.CurrentScore.Hub
+		score = &redScore.CurrentScore
 		} else {
-			hub = &blueScore.CurrentScore.Hub
+		score = &blueScore.CurrentScore
 		}
 
-		towerLevel := hub.TeleopTowerLevel
-		if towerLevel == game.TowerLevelNone {
-			towerLevel = hub.AutoTowerLevel
+		// Find the highest tower level achieved (prioritize endgame, then auto)
+		maxLevel := game.EndgameNone
+		for _, status := range score.EndgameStatuses {
+			if status > maxLevel {
+				maxLevel = status
+			}
 		}
 
-		return fmt.Sprintf("FUEL: %d TOWER: %d", totalFuel, towerLevel)
+		if maxLevel == game.EndgameNone {
+			for _, status := range score.AutoStatuses {
+				if status > maxLevel {
+					maxLevel = status
+				}
+			}
+		}
+
+		return fmt.Sprintf("FUEL: %d TOWER: %d", totalFuel, maxLevel)
 	} else {
 		// Playoff: show match scores
 		redSummary := redScore.CurrentScore.Summarize(&blueScore.CurrentScore)

@@ -1,7 +1,7 @@
 // Copyright 2026 Team 254. All Rights Reserved.
 // Author: pat@patfairbank.com (Patrick Fairbank)
 //
-// Scoring logic for the 2026 REBUILT game with FUEL and TOWER scoring.
+// Scoring logic for the 2026 REBUILT game with FUEL scoring.
 
 package game
 
@@ -10,8 +10,6 @@ import "time"
 type Hub struct {
 	AutoFuel         int        // FUEL scored during AUTO period
 	TeleopFuel       int        // FUEL scored during TELEOP period
-	AutoTowerLevel   TowerLevel // Tower level achieved during AUTO
-	TeleopTowerLevel TowerLevel // Tower level achieved during TELEOP
 	IsActive         bool           // Whether the HUB is active for FUEL scoring
 	LEDState         bool           // Current LED state
 	LastLEDToggle    time.Time      // Last time LED state was toggled
@@ -19,16 +17,6 @@ type Hub struct {
 	DeactivationTime time.Time      // When the HUB will be deactivated (for warning flash)
 	ActivationTime   time.Time      // When the HUB was activated
 }
-
-// TowerLevel represents the climbing level a robot achieves on the TOWER.
-type TowerLevel int
-
-const (
-	TowerLevelNone TowerLevel = iota
-	TowerLevel1
-	TowerLevel2
-	TowerLevel3
-)
 
 // NewHub creates a new Hub with default LED cycling period.
 func NewHub() *Hub {
@@ -109,46 +97,6 @@ func (hub *Hub) TotalFuel() int {
 	return hub.AutoFuel + hub.TeleopFuel
 }
 
-// AutoTowerPoints calculates points from TOWER climbing during AUTO.
-// Level 1 = 15 points, max 2 robots per alliance per period.
-// Higher levels only in TELEOP.
-func (hub *Hub) AutoTowerPoints() int {
-	if hub.AutoTowerLevel == TowerLevel1 {
-		return 15
-	}
-	return 0
-}
-
-// TeleopTowerPoints calculates points from TOWER climbing during TELEOP.
-// Level 1 = 10 points, Level 2 = 20 points, Level 3 = 30 points.
-func (hub *Hub) TeleopTowerPoints() int {
-	switch hub.TeleopTowerLevel {
-	case TowerLevel1:
-		return 10
-	case TowerLevel2:
-		return 20
-	case TowerLevel3:
-		return 30
-	default:
-		return 0
-	}
-}
-
-// TotalTowerPoints returns the total TOWER points from both AUTO and TELEOP.
-func (hub *Hub) TotalTowerPoints() int {
-	return hub.AutoTowerPoints() + hub.TeleopTowerPoints()
-}
-
-// HasAutoTowerClimb returns true if any robot climbed during AUTO.
-func (hub *Hub) HasAutoTowerClimb() bool {
-	return hub.AutoTowerLevel != TowerLevelNone
-}
-
-// HasTeleopTowerClimb returns true if any robot climbed during TELEOP.
-func (hub *Hub) HasTeleopTowerClimb() bool {
-	return hub.TeleopTowerLevel != TowerLevelNone
-}
-
 // IsEnergized returns true if FUEL meets the ENERGIZED threshold.
 func (hub *Hub) IsEnergized(threshold int) bool {
 	return hub.TotalFuel() >= threshold
@@ -157,9 +105,4 @@ func (hub *Hub) IsEnergized(threshold int) bool {
 // IsSupercharged returns true if FUEL meets the SUPERCHARGED threshold.
 func (hub *Hub) IsSupercharged(threshold int) bool {
 	return hub.TotalFuel() >= threshold
-}
-
-// MeetsTowerThreshold returns true if TOWER points meet the given threshold.
-func (hub *Hub) MeetsTowerThreshold(threshold int) bool {
-	return hub.TotalTowerPoints() >= threshold
 }

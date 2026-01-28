@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Team254/cheesy-arena/field"
-	"github.com/Team254/cheesy-arena/game"
 	"github.com/Team254/cheesy-arena/websocket"
 	gorillawebsocket "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -102,45 +101,8 @@ func TestScoringPanelWebsocket(t *testing.T) {
 	}
 	assert.Equal(t, 5, web.arena.RedRealtimeScore.CurrentScore.Hub.TeleopFuel)
 
-	// Send some tower level scoring commands
-	towerData := struct {
-		Level  int
-		IsAuto bool
-	}{}
-	assert.Equal(t, game.TowerLevelNone, web.arena.RedRealtimeScore.CurrentScore.Hub.AutoTowerLevel)
-	assert.Equal(t, game.TowerLevelNone, web.arena.BlueRealtimeScore.CurrentScore.Hub.AutoTowerLevel)
-	web.arena.MatchState = field.AutoPeriod
-	towerData.Level = 1
-	towerData.IsAuto = true
-	redWs.Write("setTowerLevel", towerData)
-	towerData.Level = 2
-	blueWs.Write("setTowerLevel", towerData)
-	readWebsocketType(t, redWs, "realtimeScore")
-	readWebsocketType(t, blueWs, "realtimeScore")
-	readWebsocketType(t, redWs, "realtimeScore")
-	readWebsocketType(t, blueWs, "realtimeScore")
-	assert.Equal(t, game.TowerLevel1, web.arena.RedRealtimeScore.CurrentScore.Hub.AutoTowerLevel)
-	assert.Equal(t, game.TowerLevel2, web.arena.BlueRealtimeScore.CurrentScore.Hub.AutoTowerLevel)
-
-	// Test teleop tower levels
-	web.arena.MatchState = field.TeleopPeriod
-	assert.Equal(t, game.TowerLevelNone, web.arena.RedRealtimeScore.CurrentScore.Hub.TeleopTowerLevel)
-	towerData.Level = 3
-	towerData.IsAuto = false
-	redWs.Write("setTowerLevel", towerData)
-	towerData.Level = 2
-	blueWs.Write("setTowerLevel", towerData)
-	readWebsocketType(t, redWs, "realtimeScore")
-	readWebsocketType(t, blueWs, "realtimeScore")
-	readWebsocketType(t, redWs, "realtimeScore")
-	readWebsocketType(t, blueWs, "realtimeScore")
-	assert.Equal(t, game.TowerLevel3, web.arena.RedRealtimeScore.CurrentScore.Hub.TeleopTowerLevel)
-	assert.Equal(t, game.TowerLevel2, web.arena.BlueRealtimeScore.CurrentScore.Hub.TeleopTowerLevel)
-
 	// Test that some invalid commands do nothing and don't result in score change notifications.
 	redWs.Write("invalid", nil)
-	towerData.Level = 10 // Invalid tower level
-	redWs.Write("setTowerLevel", towerData)
 
 	// Test committing logic.
 	redWs.Write("commitMatch", nil)

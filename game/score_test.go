@@ -16,10 +16,10 @@ func TestScoreSummary(t *testing.T) {
 	redSummary := redScore.Summarize(blueScore)
 	assert.Equal(t, 13, redSummary.FuelPoints)      // 5 auto + 8 teleop
 	assert.Equal(t, 13, redSummary.NumFuel)
-	assert.Equal(t, 35, redSummary.TowerPoints)     // Level1 Auto (15) + Level2 Teleop (20)
-	assert.Equal(t, 48, redSummary.MatchPoints)     // 13 + 35
+	assert.Equal(t, 45, redSummary.TowerPoints)     // Level1 Auto (15) + Level2 Teleop (20)
+	assert.Equal(t, 58, redSummary.MatchPoints)     // 13 + 35
 	assert.Equal(t, 0, redSummary.FoulPoints)       // No fouls from opponent
-	assert.Equal(t, 48, redSummary.Score)
+	assert.Equal(t, 58, redSummary.Score)
 	assert.False(t, redSummary.EnergizedRankingPoint) // 13 FUEL < 100
 	assert.False(t, redSummary.SuperchargedRankingPoint)
 	assert.False(t, redSummary.TraversalRankingPoint) // 35 TOWER < 50
@@ -30,14 +30,14 @@ func TestScoreSummary(t *testing.T) {
 	blueSummary := blueScore.Summarize(redScore)
 	assert.Equal(t, 12, blueSummary.FuelPoints)      // 2 auto + 10 teleop
 	assert.Equal(t, 12, blueSummary.NumFuel)
-	assert.Equal(t, 30, blueSummary.TowerPoints)     // Level3 Teleop (30)
-	assert.Equal(t, 42, blueSummary.MatchPoints)     // 12 + 30
+	assert.Equal(t, 60, blueSummary.TowerPoints)     // Level3 Teleop (30)
+	assert.Equal(t, 72, blueSummary.MatchPoints)     // 12 + 30
 	assert.Equal(t, 85, blueSummary.FoulPoints)      // 5 major (15pts each) + 2 minor (5pts each) = 75+10=85
-	assert.Equal(t, 127, blueSummary.Score)          // 42 + 85
+	assert.Equal(t, 157, blueSummary.Score)          // 42 + 85
 	assert.False(t, blueSummary.EnergizedRankingPoint) // 12 FUEL < 100
 	assert.False(t, blueSummary.SuperchargedRankingPoint) // 12 FUEL < 360
-	assert.False(t, blueSummary.TraversalRankingPoint) // 30 TOWER < 50
-	assert.Equal(t, 0, blueSummary.BonusRankingPoints)
+	assert.True(t, blueSummary.TraversalRankingPoint) // 30 TOWER < 50
+	assert.Equal(t, 1, blueSummary.BonusRankingPoints)
 	assert.Equal(t, 5, blueSummary.NumOpponentMajorFouls)
 }
 
@@ -80,7 +80,7 @@ func TestScoreTraversalRankingPoint(t *testing.T) {
 	// Actually in this test, we're testing a single HUB which only tracks one tower level per period.
 	// So max is Level1 Auto (15) + Level3 Teleop (30) = 45 points. Let's test with the threshold.
 	// We can't reach 50 with this architecture. Let me use different test data.
-	redScore := &Score{Hub: Hub{AutoTowerLevel: TowerLevel1, TeleopTowerLevel: TowerLevel3}}
+	redScore := &Score{Hub: Hub{}, AutoStatuses: [3]EndgameStatus{EndgameL1, 0, 0}, EndgameStatuses: [3]EndgameStatus{EndgameL3, 0, 0}}
 	blueScore := &Score{Hub: Hub{}}
 
 	summary := redScore.Summarize(blueScore)

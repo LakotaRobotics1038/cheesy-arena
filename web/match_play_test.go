@@ -141,8 +141,6 @@ func TestCommitTiebreak(t *testing.T) {
 				IsActive:         true,
 				AutoFuel:         5,
 				TeleopFuel:       8,
-				AutoTowerLevel:   game.TowerLevel1,
-				TeleopTowerLevel: game.TowerLevel2,
 			},
 			Fouls: []game.Foul{{FoulId: 1, IsMajor: false}},
 		},
@@ -151,8 +149,6 @@ func TestCommitTiebreak(t *testing.T) {
 				IsActive:         true,
 				AutoFuel:         5,
 				TeleopFuel:       8,
-				AutoTowerLevel:   game.TowerLevel1,
-				TeleopTowerLevel: game.TowerLevel2,
 			},
 			Fouls: []game.Foul{{FoulId: 2, IsMajor: false}},
 		},
@@ -291,7 +287,7 @@ func TestCommitCards(t *testing.T) {
 	assert.Equal(t, 0, matchResult.RedScoreSummary().Score)
 	// When Red is DQ'd, Blue still gets foul points from Red's fouls
 	// Blue: 42 match + 85 fouls = 127 total
-	assert.Equal(t, 127, matchResult.BlueScoreSummary().Score)
+	assert.Equal(t, 157, matchResult.BlueScoreSummary().Score)
 
 	// Check that a DQ in playoffs zeroes out the score.
 	matchResult.RedCards = map[string]string{}
@@ -299,7 +295,7 @@ func TestCommitCards(t *testing.T) {
 	assert.Nil(t, web.commitMatchScore(match, matchResult, true))
 	// When Blue is DQ'd, Red still gets foul points... wait, Blue has no fouls in TestScore2
 	// Red: 48 match + 0 fouls = 48 total
-	assert.Equal(t, 48, matchResult.RedScoreSummary().Score)
+	assert.Equal(t, 58, matchResult.RedScoreSummary().Score)
 	assert.Equal(t, 0, matchResult.BlueScoreSummary().Score)
 }
 

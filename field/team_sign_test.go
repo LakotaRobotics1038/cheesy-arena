@@ -33,12 +33,12 @@ func TestTeamSign_GenerateInMatchRearText(t *testing.T) {
 
 	// Playoff match: show match scores instead
 	arena.CurrentMatch.Type = model.Playoff
-	assert.Equal(t, "00:45 E R048-B042", generateInMatchTeamRearText(arena, true, "00:45"))
-	assert.Equal(t, "00:45 E B042-R048", generateInMatchTeamRearText(arena, false, "00:45"))
+	assert.Equal(t, "00:45 E R058-B072", generateInMatchTeamRearText(arena, true, "00:45"))
+	assert.Equal(t, "00:45 E B072-R058", generateInMatchTeamRearText(arena, false, "00:45"))
 
 	// Timer display for playoff: match scores
-	assert.Equal(t, "048-042", generateInMatchTimerRearText(arena, true))
-	assert.Equal(t, "048-042", generateInMatchTimerRearText(arena, false))
+	assert.Equal(t, "058-072", generateInMatchTimerRearText(arena, true))
+	assert.Equal(t, "058-072", generateInMatchTimerRearText(arena, false))
 }
 
 func TestTeamSign_Timer(t *testing.T) {

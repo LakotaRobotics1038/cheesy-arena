@@ -57,8 +57,8 @@ func TestMatchReviewEditExistingResult(t *testing.T) {
 	recorder := web.getHttpResponse("/match_review")
 	assert.Equal(t, 200, recorder.Code)
 	assert.Contains(t, recorder.Body.String(), ">QF4-3<")
-	assert.Contains(t, recorder.Body.String(), ">48<")  // The red score
-	assert.Contains(t, recorder.Body.String(), ">127<") // The blue score (42 + 85 foul points)
+	assert.Contains(t, recorder.Body.String(), ">58<")  // The red score
+	assert.Contains(t, recorder.Body.String(), ">157<") // The blue score (42 + 85 foul points)
 
 	// Check response for non-existent match.
 	recorder = web.getHttpResponse(fmt.Sprintf("/match_review/%d/edit", 12345))

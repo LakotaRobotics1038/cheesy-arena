@@ -18,6 +18,9 @@ let inTeleop = false;
 // True when post-auto and in edit auto mode
 let editingAuto = false;
 
+let autoStatuses = [0, 0, 0];
+let endgameStatuses = [0, 0, 0];
+
 let localFoulCounts = {
   "red-minor": 0,
   "blue-minor": 0,
@@ -149,9 +152,13 @@ const updateUIMode = function () {
 
 const endgameStatusNames = [
   "None",
-  "Park",
-  "Shallow",
-  "Deep",
+  "Level 1",
+  "Level 2",
+  "Level 3",
+];
+const autoStatusNames = [
+  "None",
+  "Level 1",
 ];
 
 // Handles a websocket message to update the realtime scoring fields.
@@ -164,39 +171,24 @@ const handleRealtimeScore = function (data) {
   }
   const score = realtimeScore.Score;
 
+  autoStatuses = score.AutoStatuses || [0, 0, 0];
+  endgameStatuses = score.EndgameStatuses || [0, 0, 0];
+
   for (let i = 0; i < 3; i++) {
     const i1 = i + 1;
-    $(`#auto-status-${i1} > .team-text`).text(score.LeaveStatuses[i] ? "Leave" : "None");
-    $(`#auto-status-${i1}`).attr("data-selected", score.LeaveStatuses[i]);
-    $(`#endgame-status-${i1} > .team-text`).text(endgameStatusNames[score.EndgameStatuses[i]]);
-    $(`#endgame-status-${i1}`).attr("data-selected", endgameStatusNames[score.EndgameStatuses[i]] != "None");
+    const autoStatus = autoStatuses[i] || 0;
+    const endgameStatus = endgameStatuses[i] || 0;
+    $(`#auto-status-${i1} > .team-text`).text(autoStatusNames[Math.min(autoStatus, autoStatusNames.length - 1)]);
+    $(`#auto-status-${i1}`).attr("data-selected", autoStatus !== 0);
+    $(`#endgame-status-${i1} > .team-text`).text(endgameStatusNames[endgameStatus]);
+    $(`#endgame-status-${i1}`).attr("data-selected", endgameStatus !== 0);
     for (let j = 0; j < endgameStatusNames.length; j++) {
-      $(`#endgame-input-${i1} .endgame-${j}`).attr("data-selected", j == score.EndgameStatuses[i]);
+      $(`#endgame-input-${i1} .endgame-${j}`).attr("data-selected", j == endgameStatus);
     }
   }
 
-  for (let i = 0; i < 12; i++) {
-    const i1 = i + 1;
-    for (let j = 0; j < 3; j++) {
-      const j2 = j + 2;
-      $(`#hub-column-${i1}`).attr(`data-l${j2}-scored`, score.Hub.Branches[j][i]);
-      $(`#hub-column-${i1}`).attr(`data-l${j2}-auto-scored`, score.Hub.AutoBranches[j][i]);
-    }
-  }
-
-  const l1Total = score.Hub.TroughNear + score.Hub.TroughFar;
-  $("#l1-total-count").text(l1Total);
-  
-  $(`#barge .counter-value`).text(score.Hub.TeleopFuel);
-  $(`#processor .counter-value`).text(score.Hub.AutoFuel);
-
-  if (nearSide) {
-    $(`#trough .counter-value`).text(score.Hub.TroughNear);
-    $(`#trough .counter-auto-value`).text(score.Hub.AutoTroughNear);
-  } else {
-    $(`#trough .counter-value`).text(score.Hub.TroughFar);
-    $(`#trough .counter-auto-value`).text(score.Hub.AutoTroughFar);
-  }
+  $(`#auto-fuel .counter-value`).text(score.Hub.AutoFuel);
+  $(`#teleop-fuel .counter-value`).text(score.Hub.TeleopFuel);
 
   redFouls = data.Red.Score.Fouls || [];
   blueFouls = data.Blue.Score.Fouls || [];
@@ -208,6 +200,13 @@ const handleRealtimeScore = function (data) {
 
 // Websocket message senders for various buttons
 const handleCounterClick = function (command, adjustment) {
+  if (command === "auto-fuel" || command === "teleop-fuel") {
+    const isAuto = command === "auto-fuel";
+    const fuelCommand = adjustment > 0 ? "addFuel" : "removeFuel";
+    websocket.send(fuelCommand, {IsAuto: isAuto});
+    return;
+  }
+
   websocket.send(command, {
     Adjustment: adjustment,
     Current: true,
@@ -215,20 +214,14 @@ const handleCounterClick = function (command, adjustment) {
     NearSide: nearSide
   });
 }
-const handleLeaveClick = function (teamPosition) {
-  websocket.send("leave", {TeamPosition: teamPosition});
+const handleAutoTowerClick = function (teamPosition) {
+  const index = teamPosition - 1;
+  const current = autoStatuses[index] || 0;
+  const next = current === 0 ? 1 : 0;
+  websocket.send("setAutoTowerLevel", {RobotIndex: index, Level: next});
 }
 const handleEndgameClick = function (teamPosition, endgameStatus) {
-  websocket.send("endgame", {TeamPosition: teamPosition, EndgameStatus: endgameStatus});
-}
-const handleHubClick = function (hubPosition, towerLevel) {
-  websocket.send("reef", {
-    ReefPosition: hubPosition,
-    ReefLevel: towerLevel,
-    Current: !editingAuto,
-    Autonomous: !inTeleop || editingAuto,
-    NearSide: nearSide
-  });
+  websocket.send("setTowerLevel", {RobotIndex: teamPosition - 1, Level: endgameStatus});
 }
 
 // Sends a websocket message to indicate that the score for this alliance is ready.

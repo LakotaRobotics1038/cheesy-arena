@@ -6,16 +6,29 @@
 package game
 
 type Score struct {
-	Hub            Hub
-	Fouls          []Foul
-	RobotsBypassed [3]bool
-	PlayoffDq      bool
+	Hub             Hub
+	Fouls           []Foul
+	RobotsBypassed  [3]bool
+	EndgameStatuses [3]EndgameStatus
+	AutoStatuses    [3]EndgameStatus
+	PlayoffDq       bool
 }
 
 // Game-specific settings that can be changed via the settings.
 var EnergizedFuelThreshold = 100
 var SuperchargedFuelThreshold = 360
 var TraversalTowerThreshold = 50
+
+
+// Represents the state of a robot at the end of the match.
+type EndgameStatus int
+
+const (
+	EndgameNone EndgameStatus = iota
+	EndgameL1
+	EndgameL2
+	EndgameL3
+)
 
 // Summarize calculates and returns the summary fields used for ranking and display.
 func (score *Score) Summarize(opponentScore *Score) *ScoreSummary {
@@ -31,8 +44,28 @@ func (score *Score) Summarize(opponentScore *Score) *ScoreSummary {
 	summary.AutoFuelPoints = score.Hub.AutoFuelPoints()
 	summary.NumFuel = score.Hub.TotalFuel()
 
-	// Calculate TOWER points.
-	summary.TowerPoints = score.Hub.AutoTowerPoints() + score.Hub.TeleopTowerPoints()
+	// Calculate AUTO Tower points.
+	for _, status := range score.AutoStatuses {
+		switch status {
+		case EndgameL1:
+			summary.TowerPoints += 15
+		default:
+		}
+	}
+
+	// Calculate endgame points.
+	for _, status := range score.EndgameStatuses {
+		switch status {
+		case EndgameL1:
+			summary.TowerPoints += 10
+		case EndgameL2:
+			summary.TowerPoints += 20
+		case EndgameL3:
+			summary.TowerPoints += 30
+		default:
+		}
+	}
+
 	// Match points = FUEL points + TOWER points.
 	summary.MatchPoints = summary.FuelPoints + summary.TowerPoints
 
@@ -63,7 +96,7 @@ func (score *Score) Summarize(opponentScore *Score) *ScoreSummary {
 	}
 
 	// TRAVERSAL RP - TOWER points at or above threshold.
-	if score.Hub.MeetsTowerThreshold(TraversalTowerThreshold) {
+	if summary.TowerPoints >= TraversalTowerThreshold {
 		summary.TraversalRankingPoint = true
 	}
 

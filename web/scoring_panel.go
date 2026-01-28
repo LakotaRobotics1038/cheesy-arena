@@ -197,10 +197,10 @@ func (web *Web) scoringPanelWebsocketHandler(w http.ResponseWriter, r *http.Requ
 			}
 			scoreChanged = true
 
-		} else if command == "setTowerLevel" {
+		} else if command == "setAutoTowerLevel" {
 			args := struct {
-				Level  int
-				IsAuto bool
+				RobotIndex int
+				Level      int
 			}{}
 			err = mapstructure.Decode(data, &args)
 			if err != nil {
@@ -208,13 +208,23 @@ func (web *Web) scoringPanelWebsocketHandler(w http.ResponseWriter, r *http.Requ
 				continue
 			}
 
-			if args.Level >= 0 && args.Level <= 3 {
-				towerLevel := game.TowerLevel(args.Level)
-				if args.IsAuto {
-					score.Hub.AutoTowerLevel = towerLevel
-				} else {
-					score.Hub.TeleopTowerLevel = towerLevel
-				}
+			if args.RobotIndex >= 0 && args.RobotIndex <= 2 && args.Level >= 0 && args.Level <= 1 {
+				score.AutoStatuses[args.RobotIndex] = game.EndgameStatus(args.Level)
+				scoreChanged = true
+			}
+		} else if command == "setTowerLevel" {
+			args := struct {
+				RobotIndex int
+				Level      int
+			}{}
+			err = mapstructure.Decode(data, &args)
+			if err != nil {
+				ws.WriteError(err.Error())
+				continue
+			}
+
+			if args.RobotIndex >= 0 && args.RobotIndex <= 2 && args.Level >= 0 && args.Level <= 3 {
+				score.EndgameStatuses[args.RobotIndex] = game.EndgameStatus(args.Level)
 				scoreChanged = true
 			}
 
