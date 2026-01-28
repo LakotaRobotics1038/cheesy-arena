@@ -9,10 +9,9 @@ import "math/rand"
 
 type RankingFields struct {
 	RankingPoints      int
-	CoopertitionPoints int
 	MatchPoints        int
-	AutoPoints         int
-	BargePoints        int
+	FuelPoints         int
+	TowerPoints        int
 	Random             float64
 	Wins               int
 	Losses             int
@@ -55,12 +54,9 @@ func (fields *RankingFields) AddScoreSummary(ownScore *ScoreSummary, opponentSco
 	fields.RankingPoints += ownScore.BonusRankingPoints
 
 	// Assign tiebreaker points.
-	if ownScore.CoopertitionBonus {
-		fields.CoopertitionPoints++
-	}
 	fields.MatchPoints += ownScore.MatchPoints
-	fields.AutoPoints += ownScore.AutoPoints
-	fields.BargePoints += ownScore.BargePoints
+	fields.FuelPoints += ownScore.FuelPoints
+	fields.TowerPoints += ownScore.TowerPoints
 }
 
 // Helper function to implement the required interface for Sort.
@@ -75,19 +71,16 @@ func (rankings Rankings) Less(i, j int) bool {
 
 	// Use cross-multiplication to keep it in integer math.
 	if a.RankingPoints*b.Played == b.RankingPoints*a.Played {
-		if a.CoopertitionPoints*b.Played == b.CoopertitionPoints*a.Played {
-			if a.MatchPoints*b.Played == b.MatchPoints*a.Played {
-				if a.AutoPoints*b.Played == b.AutoPoints*a.Played {
-					if a.BargePoints*b.Played == b.BargePoints*a.Played {
-						return a.Random > b.Random
-					}
-					return a.BargePoints*b.Played > b.BargePoints*a.Played
+		if a.MatchPoints*b.Played == b.MatchPoints*a.Played {
+			if a.TowerPoints*b.Played == b.TowerPoints*a.Played {
+				if a.FuelPoints*b.Played == b.FuelPoints*a.Played {
+					return a.Random > b.Random
 				}
-				return a.AutoPoints*b.Played > b.AutoPoints*a.Played
+				return a.FuelPoints*b.Played > b.FuelPoints*a.Played
 			}
-			return a.MatchPoints*b.Played > b.MatchPoints*a.Played
+			return a.TowerPoints*b.Played > b.TowerPoints*a.Played
 		}
-		return a.CoopertitionPoints*b.Played > b.CoopertitionPoints*a.Played
+		return a.MatchPoints*b.Played > b.MatchPoints*a.Played
 	}
 	return a.RankingPoints*b.Played > b.RankingPoints*a.Played
 }

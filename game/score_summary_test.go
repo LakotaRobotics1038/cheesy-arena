@@ -1,4 +1,4 @@
-// Copyright 2022 Team 254. All Rights Reserved.
+// Copyright 2017 Team 254. All Rights Reserved.
 // Author: pat@patfairbank.com (Patrick Fairbank)
 
 package game
@@ -8,51 +8,52 @@ import (
 	"testing"
 )
 
-func TestScoreSummaryDetermineMatchStatus(t *testing.T) {
-	redScoreSummary := &ScoreSummary{Score: 10}
-	blueScoreSummary := &ScoreSummary{Score: 10}
+func TestDetermineMatchStatus(t *testing.T) {
+	redScoreSummary := &ScoreSummary{}
+	blueScoreSummary := &ScoreSummary{}
+
+	redScoreSummary.Score = 10
+	blueScoreSummary.Score = 10
 	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
-	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
 	redScoreSummary.Score = 11
 	assert.Equal(t, RedWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
 	assert.Equal(t, RedWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
-	blueScoreSummary.Score = 12
+	redScoreSummary.Score = 9
 	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
 	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
-	redScoreSummary.Score = 12
-	redScoreSummary.NumOpponentMajorFouls = 11
-	redScoreSummary.AutoPoints = 11
-	redScoreSummary.BargePoints = 11
-	blueScoreSummary.NumOpponentMajorFouls = 10
-	blueScoreSummary.AutoPoints = 10
-	blueScoreSummary.BargePoints = 10
+	// Test playoff tiebreakers.
+	redScoreSummary.Score = 10
+	redScoreSummary.TowerPoints = 35
+	blueScoreSummary.TowerPoints = 30
 	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
 	assert.Equal(t, RedWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
-	blueScoreSummary.NumOpponentMajorFouls = 12
+	redScoreSummary.TowerPoints = 30
+	blueScoreSummary.TowerPoints = 40
 	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
 	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
-	redScoreSummary.NumOpponentMajorFouls = 12
-	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
+	blueScoreSummary.TowerPoints = 30
+	redScoreSummary.FuelPoints = 50
+	blueScoreSummary.FuelPoints = 40
 	assert.Equal(t, RedWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
-	blueScoreSummary.AutoPoints = 12
-	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
+	redScoreSummary.FuelPoints = 40
+	blueScoreSummary.FuelPoints = 50
 	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
-	redScoreSummary.AutoPoints = 12
-	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
+	blueScoreSummary.FuelPoints = 40
+	redScoreSummary.NumOpponentMajorFouls = 2
+	blueScoreSummary.NumOpponentMajorFouls = 0
 	assert.Equal(t, RedWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
-	blueScoreSummary.BargePoints = 12
-	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
+	redScoreSummary.NumOpponentMajorFouls = 0
+	blueScoreSummary.NumOpponentMajorFouls = 1
 	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
-	redScoreSummary.BargePoints = 12
-	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
+	blueScoreSummary.NumOpponentMajorFouls = 0
 	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 }
