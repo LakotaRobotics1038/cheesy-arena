@@ -43,13 +43,13 @@ func NewHub() *Hub {
 // If within 3 seconds of deactivation, flashes rapidly as a warning.
 func (hub *Hub) UpdateLEDState(currentTime time.Time) {
 	cycleFreq := hub.LEDCyclePeriod
-	
+
 	// If within 3 seconds of deactivation, flash faster as a warning
-	if !hub.DeactivationTime.IsZero() && 
+	if !hub.DeactivationTime.IsZero() &&
 	   currentTime.Add(3*time.Second).After(hub.DeactivationTime) {
 		cycleFreq = 500 * time.Millisecond // Rapid warning flash
 	}
-	
+
 	if currentTime.Sub(hub.LastLEDToggle) >= cycleFreq {
 		hub.LEDState = !hub.LEDState
 		hub.LastLEDToggle = currentTime
