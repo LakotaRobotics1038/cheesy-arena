@@ -53,48 +53,21 @@ type TbaAlliance struct {
 }
 
 type TbaScoreBreakdown struct {
-	AutoLineRobot1          string  `mapstructure:"autoLineRobot1"`
-	AutoLineRobot2          string  `mapstructure:"autoLineRobot2"`
-	AutoLineRobot3          string  `mapstructure:"autoLineRobot3"`
-	AutoMobilityPoints      int     `mapstructure:"autoMobilityPoints"`
-	AutoReef                tbaReef `mapstructure:"autoReef"`
-	AutoCoralCount          int     `mapstructure:"autoCoralCount"`
-	AutoCoralPoints         int     `mapstructure:"autoCoralPoints"`
-	AutoPoints              int     `mapstructure:"autoPoints"`
-	TeleopReef              tbaReef `mapstructure:"teleopReef"`
-	TeleopCoralCount        int     `mapstructure:"teleopCoralCount"`
-	TeleopCoralPoints       int     `mapstructure:"teleopCoralPoints"`
-	NetAlgaeCount           int     `mapstructure:"netAlgaeCount"`
-	WallAlgaeCount          int     `mapstructure:"wallAlgaeCount"`
-	AlgaePoints             int     `mapstructure:"algaePoints"`
-	EndGameRobot1           string  `mapstructure:"endGameRobot1"`
-	EndGameRobot2           string  `mapstructure:"endGameRobot2"`
-	EndGameRobot3           string  `mapstructure:"endGameRobot3"`
-	EndGameBargePoints      int     `mapstructure:"endGameBargePoints"`
-	TeleopPoints            int     `mapstructure:"teleopPoints"`
-	CoopertitionCriteriaMet bool    `mapstructure:"coopertitionCriteriaMet"`
-	AutoBonusAchieved       bool    `mapstructure:"autoBonusAchieved"`
-	CoralBonusAchieved      bool    `mapstructure:"coralBonusAchieved"`
-	BargeBonusAchieved      bool    `mapstructure:"bargeBonusAchieved"`
-	FoulCount               int     `mapstructure:"foulCount"`
-	TechFoulCount           int     `mapstructure:"techFoulCount"`
-	G206Penalty             bool    `mapstructure:"g206Penalty"`
-	G410Penalty             bool    `mapstructure:"g410Penalty"`
-	G418Penalty             bool    `mapstructure:"g418Penalty"`
-	G428Penalty             bool    `mapstructure:"g428Penalty"`
-	FoulPoints              int     `mapstructure:"foulPoints"`
-	TotalPoints             int     `mapstructure:"totalPoints"`
-	RP                      int     `mapstructure:"rp"`
-}
-
-type tbaReef struct {
-	BotRow         map[string]bool `mapstructure:"botRow"`
-	MidRow         map[string]bool `mapstructure:"midRow"`
-	TopRow         map[string]bool `mapstructure:"topRow"`
-	TbaBotRowCount int             `mapstructure:"tba_botRowCount"`
-	TbaMidRowCount int             `mapstructure:"tba_midRowCount"`
-	TbaTopRowCount int             `mapstructure:"tba_topRowCount"`
-	Trough         int             `mapstructure:"trough"`
+	AutoFuel               int  `mapstructure:"autoFuel"`
+	TeleopFuel             int  `mapstructure:"teleopFuel"`
+	FuelPoints             int  `mapstructure:"fuelPoints"`
+	AutoTowerLevel         int  `mapstructure:"autoTowerLevel"`
+	TeleopTowerLevel       int  `mapstructure:"teleopTowerLevel"`
+	TowerPoints            int  `mapstructure:"towerPoints"`
+	MatchPoints            int  `mapstructure:"matchPoints"`
+	EnergizedRankingPoint  bool `mapstructure:"energizedRankingPoint"`
+	SuperchargedRankingPoint bool `mapstructure:"superchargedRankingPoint"`
+	TraversalRankingPoint  bool `mapstructure:"traversalRankingPoint"`
+	FoulCount              int  `mapstructure:"foulCount"`
+	TechFoulCount          int  `mapstructure:"techFoulCount"`
+	FoulPoints             int  `mapstructure:"foulPoints"`
+	TotalPoints            int  `mapstructure:"totalPoints"`
+	RP                     int  `mapstructure:"rp"`
 }
 
 type TbaRanking struct {
@@ -104,7 +77,7 @@ type TbaRanking struct {
 	Coop    float32
 	Match   float32
 	Auto    float32
-	Barge   float32
+	Tower   float32
 	Wins    int `json:"wins"`
 	Losses  int `json:"losses"`
 	Ties    int `json:"ties"`
@@ -152,14 +125,6 @@ type TbaPublishedAward struct {
 	Name    string `json:"name_str"`
 	TeamKey string `json:"team_key"`
 	Awardee string `json:"awardee"`
-}
-
-var leaveMapping = map[bool]string{false: "No", true: "Yes"}
-var endGameStatusMapping = map[game.EndgameStatus]string{
-	game.EndgameNone:        "None",
-	game.EndgameParked:      "Parked",
-	game.EndgameShallowCage: "ShallowCage",
-	game.EndgameDeepCage:    "DeepCage",
 }
 
 func NewTbaClient(eventCode, secretId, secret string) *TbaClient {
@@ -409,18 +374,18 @@ func (client *TbaClient) PublishRankings(database *model.Database) error {
 		return err
 	}
 
-	// Build a JSON object of TBA-format rankings.
-	breakdowns := []string{"RP", "Coop", "Match", "Auto", "Barge"}
+	// Build a JSON object of TBA-format rankings for 2026 game.
+	breakdowns := []string{"RP", "Match", "Fuel", "Tower"}
 	tbaRankings := make([]TbaRanking, len(rankings))
 	for i, ranking := range rankings {
 		tbaRankings[i] = TbaRanking{
 			TeamKey: getTbaTeam(ranking.TeamId),
 			Rank:    ranking.Rank,
 			RP:      float32(ranking.RankingPoints) / float32(ranking.Played),
-			Coop:    float32(ranking.CoopertitionPoints) / float32(ranking.Played),
+			Coop:    float32(ranking.FuelPoints) / float32(ranking.Played),
 			Match:   float32(ranking.MatchPoints) / float32(ranking.Played),
-			Auto:    float32(ranking.AutoPoints) / float32(ranking.Played),
-			Barge:   float32(ranking.BargePoints) / float32(ranking.Played),
+			Auto:    float32(ranking.FuelPoints) / float32(ranking.Played),
+			Tower:   float32(ranking.TowerPoints) / float32(ranking.Played),
 			Wins:    ranking.Wins,
 			Losses:  ranking.Losses,
 			Ties:    ranking.Ties,
@@ -633,104 +598,49 @@ func createTbaScoringBreakdown(
 	matchResult *model.MatchResult,
 	alliance string,
 ) map[string]any {
-	var breakdown TbaScoreBreakdown
 	var score *game.Score
-	var scoreSummary, opponentScoreSummary *game.ScoreSummary
+	var scoreSummary *game.ScoreSummary
+
 	if alliance == "red" {
 		score = matchResult.RedScore
 		scoreSummary = matchResult.RedScoreSummary()
-		opponentScoreSummary = matchResult.BlueScoreSummary()
 	} else {
 		score = matchResult.BlueScore
 		scoreSummary = matchResult.BlueScoreSummary()
-		opponentScoreSummary = matchResult.RedScoreSummary()
 	}
 
-	breakdown.AutoLineRobot1 = leaveMapping[score.LeaveStatuses[0]]
-	breakdown.AutoLineRobot2 = leaveMapping[score.LeaveStatuses[1]]
-	breakdown.AutoLineRobot3 = leaveMapping[score.LeaveStatuses[2]]
-	breakdown.AutoMobilityPoints = scoreSummary.LeavePoints
-	breakdown.AutoReef.BotRow = make(map[string]bool)
-	breakdown.AutoReef.MidRow = make(map[string]bool)
-	breakdown.AutoReef.TopRow = make(map[string]bool)
-	for i := 0; i < 12; i++ {
-		breakdown.AutoReef.BotRow["node"+string(rune('A'+i))] = score.Reef.AutoBranches[game.Level2][i]
-		breakdown.AutoReef.MidRow["node"+string(rune('A'+i))] = score.Reef.AutoBranches[game.Level3][i]
-		breakdown.AutoReef.TopRow["node"+string(rune('A'+i))] = score.Reef.AutoBranches[game.Level4][i]
-	}
-	breakdown.AutoReef.TbaBotRowCount = score.Reef.CountCoralByLevelAndPeriod(game.Level2, true)
-	breakdown.AutoReef.TbaMidRowCount = score.Reef.CountCoralByLevelAndPeriod(game.Level3, true)
-	breakdown.AutoReef.TbaTopRowCount = score.Reef.CountCoralByLevelAndPeriod(game.Level4, true)
-	breakdown.AutoReef.Trough = score.Reef.CountCoralByLevelAndPeriod(game.Level1, true)
-	breakdown.AutoCoralCount = score.Reef.AutoCoralCount()
-	breakdown.AutoCoralPoints = score.Reef.AutoCoralPoints()
-	breakdown.AutoPoints = scoreSummary.AutoPoints
-	breakdown.TeleopReef.BotRow = make(map[string]bool)
-	breakdown.TeleopReef.MidRow = make(map[string]bool)
-	breakdown.TeleopReef.TopRow = make(map[string]bool)
-	for i := 0; i < 12; i++ {
-		breakdown.TeleopReef.BotRow["node"+string(rune('A'+i))] = score.Reef.Branches[game.Level2][i]
-		breakdown.TeleopReef.MidRow["node"+string(rune('A'+i))] = score.Reef.Branches[game.Level3][i]
-		breakdown.TeleopReef.TopRow["node"+string(rune('A'+i))] = score.Reef.Branches[game.Level4][i]
-	}
-	breakdown.TeleopReef.TbaBotRowCount = breakdown.AutoReef.TbaBotRowCount +
-		score.Reef.CountCoralByLevelAndPeriod(game.Level2, false)
-	breakdown.TeleopReef.TbaMidRowCount = breakdown.AutoReef.TbaMidRowCount +
-		score.Reef.CountCoralByLevelAndPeriod(game.Level3, false)
-	breakdown.TeleopReef.TbaTopRowCount = breakdown.AutoReef.TbaTopRowCount +
-		score.Reef.CountCoralByLevelAndPeriod(game.Level4, false)
-	breakdown.TeleopReef.Trough = score.Reef.CountCoralByLevelAndPeriod(game.Level1, false)
-	breakdown.TeleopCoralCount = score.Reef.TeleopCoralCount()
-	teleopCoralPoints := score.Reef.TeleopCoralPoints()
-	breakdown.TeleopCoralPoints = teleopCoralPoints
-	breakdown.NetAlgaeCount = score.BargeAlgae
-	breakdown.WallAlgaeCount = score.ProcessorAlgae
-	breakdown.AlgaePoints = scoreSummary.AlgaePoints
-	breakdown.EndGameRobot1 = endGameStatusMapping[score.EndgameStatuses[0]]
-	breakdown.EndGameRobot2 = endGameStatusMapping[score.EndgameStatuses[1]]
-	breakdown.EndGameRobot3 = endGameStatusMapping[score.EndgameStatuses[2]]
-	breakdown.EndGameBargePoints = scoreSummary.BargePoints
-	breakdown.TeleopPoints = teleopCoralPoints + scoreSummary.AlgaePoints + scoreSummary.BargePoints
-	breakdown.CoopertitionCriteriaMet = scoreSummary.CoopertitionCriteriaMet
-	breakdown.AutoBonusAchieved = scoreSummary.AutoBonusRankingPoint
-	breakdown.CoralBonusAchieved = scoreSummary.CoralBonusRankingPoint
-	breakdown.BargeBonusAchieved = scoreSummary.BargeBonusRankingPoint
-	for _, foul := range score.Fouls {
-		if foul.IsMajor {
-			breakdown.TechFoulCount++
-		} else if foul.PointValue() > 0 {
-			breakdown.FoulCount++
-		}
-		if foul.Rule() != nil && foul.Rule().IsRankingPoint {
-			switch foul.Rule().RuleNumber {
-			case "G206":
-				breakdown.G206Penalty = true
-			case "G410":
-				breakdown.G410Penalty = true
-			case "G418":
-				breakdown.G418Penalty = true
-			case "G428":
-				breakdown.G428Penalty = true
-			}
-		}
-	}
-	breakdown.FoulPoints = scoreSummary.FoulPoints
-	breakdown.TotalPoints = scoreSummary.Score
 
+	breakdown := TbaScoreBreakdown{
+		AutoFuel:                 score.Hub.AutoFuel,
+		TeleopFuel:               score.Hub.TeleopFuel,
+		FuelPoints:               scoreSummary.FuelPoints,
+		AutoTowerLevel:           int(score.Hub.AutoTowerLevel),
+		TeleopTowerLevel:         int(score.Hub.TeleopTowerLevel),
+		TowerPoints:              scoreSummary.TowerPoints,
+		MatchPoints:              scoreSummary.MatchPoints,
+		EnergizedRankingPoint:    scoreSummary.EnergizedRankingPoint,
+		SuperchargedRankingPoint: scoreSummary.SuperchargedRankingPoint,
+		TraversalRankingPoint:    scoreSummary.TraversalRankingPoint,
+		FoulCount:                len(score.Fouls),
+		FoulPoints:               scoreSummary.FoulPoints,
+		TotalPoints:              scoreSummary.Score,
+	}
+
+	// Calculate ranking points if needed
 	if match.ShouldUpdateRankings() {
-		// Calculate and set the ranking points for the match.
+		var opponentScoreSummary *game.ScoreSummary
+		if alliance == "red" {
+			opponentScoreSummary = matchResult.BlueScoreSummary()
+		} else {
+			opponentScoreSummary = matchResult.RedScoreSummary()
+		}
 		var ranking game.Ranking
 		ranking.AddScoreSummary(scoreSummary, opponentScoreSummary, false)
 		breakdown.RP = ranking.RankingPoints
 	}
 
-	// Turn the breakdown struct into a map in order to be able to remove any fields that are disabled based on the
-	// event settings.
+	// Convert struct to map
 	breakdownMap := make(map[string]any)
-	_ = mapstructure.Decode(breakdown, &breakdownMap)
-	if !eventSettings.CoralBonusCoopEnabled {
-		delete(breakdownMap, "coopertitionCriteriaMet")
-	}
-
+	mapstructure.Decode(breakdown, &breakdownMap)
 	return breakdownMap
 }

@@ -8,45 +8,8 @@ package game
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
 )
 
-func TestHubLEDCycling(t *testing.T) {
-	hub := NewHub()
-	assert.False(t, hub.LEDState)
-
-	// Simulate time progression
-	startTime := time.Now()
-	hub.LastLEDToggle = startTime
-
-	// Before cycle period, LED state should not change
-	hub.UpdateLEDState(startTime.Add(3 * time.Second))
-	assert.False(t, hub.LEDState)
-
-	// After cycle period, LED state should toggle
-	hub.UpdateLEDState(startTime.Add(6 * time.Second))
-	assert.True(t, hub.LEDState)
-
-	// Another cycle should toggle it back
-	hub.UpdateLEDState(startTime.Add(12 * time.Second))
-	assert.False(t, hub.LEDState)
-}
-
-func TestHubLEDCyclingCustomPeriod(t *testing.T) {
-	hub := NewHub()
-	hub.LEDCyclePeriod = 2 * time.Second
-	assert.False(t, hub.LEDState)
-
-	startTime := time.Now()
-	hub.LastLEDToggle = startTime
-
-	// After custom cycle period
-	hub.UpdateLEDState(startTime.Add(2 * time.Second))
-	assert.True(t, hub.LEDState)
-
-	hub.UpdateLEDState(startTime.Add(4 * time.Second))
-	assert.False(t, hub.LEDState)
-}
 
 func TestHubFuelPoints(t *testing.T) {
 	hub := &Hub{

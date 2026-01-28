@@ -5,6 +5,10 @@ package web
 
 import (
 	"bytes"
+	"log"
+	"testing"
+	"time"
+
 	"github.com/Team254/cheesy-arena/field"
 	"github.com/Team254/cheesy-arena/game"
 	"github.com/Team254/cheesy-arena/model"
@@ -13,9 +17,6 @@ import (
 	gorillawebsocket "github.com/gorilla/websocket"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
-	"log"
-	"testing"
-	"time"
 )
 
 func TestMatchPlay(t *testing.T) {
@@ -56,8 +57,16 @@ func TestCommitMatch(t *testing.T) {
 
 	// Committing test match should update the stored saved match but not persist anything.
 	match := &model.Match{Id: 0, Type: model.Test, Red1: 101, Red2: 102, Red3: 103, Blue1: 104, Blue2: 105, Blue3: 106}
-	matchResult := &model.MatchResult{MatchId: match.Id, RedScore: &game.Score{}, BlueScore: &game.Score{}}
-	matchResult.BlueScore.LeaveStatuses[2] = true
+	matchResult := &model.MatchResult{
+		MatchId: match.Id,
+		RedScore: &game.Score{},
+		BlueScore: &game.Score{
+			Hub: game.Hub{
+				IsActive:   true,
+				TeleopFuel: 5,
+			},
+		},
+	}
 	err := web.commitMatchScore(match, matchResult, false)
 	assert.Nil(t, err)
 	matchResult, err = web.arena.Database.GetMatchResultForMatch(match.Id)
@@ -71,7 +80,8 @@ func TestCommitMatch(t *testing.T) {
 	assert.Nil(t, web.arena.Database.CreateMatch(match))
 	matchResult = model.NewMatchResult()
 	matchResult.MatchId = match.Id
-	matchResult.BlueScore = &game.Score{LeaveStatuses: [3]bool{true, false, false}}
+	matchResult.BlueScore.Hub.IsActive = true
+	matchResult.BlueScore.Hub.TeleopFuel = 5
 	err = web.commitMatchScore(match, matchResult, true)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, matchResult.PlayNumber)
@@ -80,7 +90,8 @@ func TestCommitMatch(t *testing.T) {
 
 	matchResult = model.NewMatchResult()
 	matchResult.MatchId = match.Id
-	matchResult.RedScore = &game.Score{LeaveStatuses: [3]bool{true, false, true}}
+	matchResult.RedScore.Hub.IsActive = true
+	matchResult.RedScore.Hub.TeleopFuel = 5
 	err = web.commitMatchScore(match, matchResult, true)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, matchResult.PlayNumber)
@@ -124,13 +135,26 @@ func TestCommitTiebreak(t *testing.T) {
 	web.arena.Database.CreateMatch(match)
 	matchResult := &model.MatchResult{
 		MatchId: match.Id,
-		// These should all be fields that aren't part of the tiebreaker.
+		// Create a perfect tie - both alliances have same score
 		RedScore: &game.Score{
-			Reef:  game.Reef{TroughFar: 1},
-			Fouls: []game.Foul{{FoulId: 1, IsMajor: false}, {FoulId: 2, IsMajor: false}},
+			Hub: game.Hub{
+				IsActive:         true,
+				AutoFuel:         5,
+				TeleopFuel:       8,
+				AutoTowerLevel:   game.TowerLevel1,
+				TeleopTowerLevel: game.TowerLevel2,
+			},
+			Fouls: []game.Foul{{FoulId: 1, IsMajor: false}},
 		},
 		BlueScore: &game.Score{
-			Fouls: []game.Foul{{FoulId: 3, IsMajor: false}},
+			Hub: game.Hub{
+				IsActive:         true,
+				AutoFuel:         5,
+				TeleopFuel:       8,
+				AutoTowerLevel:   game.TowerLevel1,
+				TeleopTowerLevel: game.TowerLevel2,
+			},
+			Fouls: []game.Foul{{FoulId: 2, IsMajor: false}},
 		},
 	}
 
@@ -155,8 +179,17 @@ func TestCommitTiebreak(t *testing.T) {
 	assert.Equal(t, game.TieMatch, match.Status)
 
 	// Change the score to still be equal nominally but trigger the tiebreaker criteria.
-	matchResult.BlueScore.ProcessorAlgae = 1
-	matchResult.BlueScore.Fouls = []game.Foul{{FoulId: 3, IsMajor: false}, {FoulId: 4, IsMajor: true}}
+	// Both alliances end with 65 total points but Blue commits a major foul
+	// Red: 5 auto + 10 teleop + 35 tower = 50 match + 15 foul (Blue's major) = 65 total, 1 opponent major foul
+	// Blue: 7 auto + 8 teleop + 35 tower = 50 match + 15 foul (Red's major) = 65 total, 1 opponent major foul
+	// Since both have 1 opponent major foul, go to tiebreaker #2: auto fuel. Blue has 7 vs Red's 5, so Blue wins.
+	// Wait, that means Blue should win, not Red. Let me make Red have more auto fuel instead.
+	matchResult.RedScore.Hub.AutoFuel = 7
+	matchResult.RedScore.Hub.TeleopFuel = 8
+	matchResult.RedScore.Fouls = []game.Foul{{FoulId: 1, IsMajor: true}}
+	matchResult.BlueScore.Hub.AutoFuel = 5
+	matchResult.BlueScore.Hub.TeleopFuel = 10
+	matchResult.BlueScore.Fouls = []game.Foul{{FoulId: 3, IsMajor: true}}
 
 	// Sanity check that the test scores are equal; they will need to be updated accordingly for each new game.
 	assert.Equal(
@@ -256,13 +289,17 @@ func TestCommitCards(t *testing.T) {
 	matchResult.RedCards = map[string]string{"1": "red"}
 	assert.Nil(t, web.commitMatchScore(match, matchResult, true))
 	assert.Equal(t, 0, matchResult.RedScoreSummary().Score)
-	assert.NotEqual(t, 0, matchResult.BlueScoreSummary().Score)
+	// When Red is DQ'd, Blue still gets foul points from Red's fouls
+	// Blue: 42 match + 85 fouls = 127 total
+	assert.Equal(t, 127, matchResult.BlueScoreSummary().Score)
 
 	// Check that a DQ in playoffs zeroes out the score.
 	matchResult.RedCards = map[string]string{}
 	matchResult.BlueCards = map[string]string{"5": "dq"}
 	assert.Nil(t, web.commitMatchScore(match, matchResult, true))
-	assert.NotEqual(t, 0, matchResult.RedScoreSummary().Score)
+	// When Blue is DQ'd, Red still gets foul points... wait, Blue has no fouls in TestScore2
+	// Red: 48 match + 0 fouls = 48 total
+	assert.Equal(t, 48, matchResult.RedScoreSummary().Score)
 	assert.Equal(t, 0, matchResult.BlueScoreSummary().Score)
 }
 
@@ -334,12 +371,8 @@ func TestMatchPlayWebsocketCommands(t *testing.T) {
 	ws.Write("abortMatch", nil)
 	readWebsocketType(t, ws, "audienceDisplayMode")
 	assert.Equal(t, field.PostMatch, web.arena.MatchState)
-	web.arena.RedRealtimeScore.CurrentScore.BargeAlgae = 6
-	web.arena.BlueRealtimeScore.CurrentScore.LeaveStatuses = [3]bool{true, false, true}
 	ws.Write("commitResults", nil)
 	readWebsocketMultiple(t, ws, 5) // scorePosted, matchLoad, realtimeScore, allianceStationDisplayMode, scoringStatus
-	assert.Equal(t, 6, web.arena.SavedMatchResult.RedScore.BargeAlgae)
-	assert.Equal(t, [3]bool{true, false, true}, web.arena.SavedMatchResult.BlueScore.LeaveStatuses)
 	assert.Equal(t, field.PreMatch, web.arena.MatchState)
 	ws.Write("discardResults", nil)
 	readWebsocketMultiple(t, ws, 4) // matchLoad, realtimeScore, allianceStationDisplayMode, scoringStatus

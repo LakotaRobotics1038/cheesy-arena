@@ -6,10 +6,10 @@
 package game
 
 type Score struct {
-	RedHub     Hub
-	BlueHub    Hub
-	Fouls      []Foul
-	PlayoffDq  bool
+	Hub            Hub
+	Fouls          []Foul
+	RobotsBypassed [3]bool
+	PlayoffDq      bool
 }
 
 // Game-specific settings that can be changed via the settings.
@@ -18,34 +18,32 @@ var SuperchargedFuelThreshold = 360
 var TraversalTowerThreshold = 50
 
 // Summarize calculates and returns the summary fields used for ranking and display.
-// allianceColor should be "red" or "blue"
-func (score *Score) Summarize(allianceColor string, opponentScore *Score) *ScoreSummary {
+func (score *Score) Summarize(opponentScore *Score) *ScoreSummary {
 	summary := new(ScoreSummary)
 
-	var ownHub *Hub
-
-	if allianceColor == "red" {
-		ownHub = &score.RedHub
-	} else {
-		ownHub = &score.BlueHub
+	// If this alliance is DQ'd in playoffs, zero out the score.
+	if score.PlayoffDq {
+		return summary
 	}
 
 	// Calculate FUEL points (1 point per FUEL, only if HUB is active).
-	summary.FuelPoints = ownHub.AutoFuelPoints() + ownHub.TeleopFuelPoints()
-	summary.NumFuel = ownHub.TotalFuel()
+	summary.FuelPoints = score.Hub.AutoFuelPoints() + score.Hub.TeleopFuelPoints()
+	summary.AutoFuelPoints = score.Hub.AutoFuelPoints()
+	summary.NumFuel = score.Hub.TotalFuel()
 
 	// Calculate TOWER points.
-	summary.TowerPoints = ownHub.AutoTowerPoints() + ownHub.TeleopTowerPoints()
-
+	summary.TowerPoints = score.Hub.AutoTowerPoints() + score.Hub.TeleopTowerPoints()
 	// Match points = FUEL points + TOWER points.
 	summary.MatchPoints = summary.FuelPoints + summary.TowerPoints
 
 	// Calculate penalty points.
-	for _, foul := range opponentScore.Fouls {
-		summary.FoulPoints += foul.PointValue()
-		// Store the number of major fouls since it is used to break ties in playoffs.
-		if foul.IsMajor {
-			summary.NumOpponentMajorFouls++
+	if opponentScore != nil {
+		for _, foul := range opponentScore.Fouls {
+			summary.FoulPoints += foul.PointValue()
+			// Store the number of major fouls since it is used to break ties in playoffs.
+			if foul.IsMajor {
+				summary.NumOpponentMajorFouls++
+			}
 		}
 	}
 
@@ -55,17 +53,17 @@ func (score *Score) Summarize(allianceColor string, opponentScore *Score) *Score
 	// Bonus RPs are: ENERGIZED RP, SUPERCHARGED RP, TRAVERSAL RP.
 
 	// ENERGIZED RP - FUEL at or above threshold.
-	if ownHub.IsEnergized(EnergizedFuelThreshold) {
+	if score.Hub.IsEnergized(EnergizedFuelThreshold) {
 		summary.EnergizedRankingPoint = true
 	}
 
 	// SUPERCHARGED RP - FUEL at or above higher threshold.
-	if ownHub.IsSupercharged(SuperchargedFuelThreshold) {
+	if score.Hub.IsSupercharged(SuperchargedFuelThreshold) {
 		summary.SuperchargedRankingPoint = true
 	}
 
 	// TRAVERSAL RP - TOWER points at or above threshold.
-	if ownHub.MeetsTowerThreshold(TraversalTowerThreshold) {
+	if score.Hub.MeetsTowerThreshold(TraversalTowerThreshold) {
 		summary.TraversalRankingPoint = true
 	}
 
@@ -85,8 +83,8 @@ func (score *Score) Summarize(allianceColor string, opponentScore *Score) *Score
 
 // Equals returns true if and only if all fields of the two scores are equal.
 func (score *Score) Equals(other *Score) bool {
-	if score.RedHub != other.RedHub ||
-		score.BlueHub != other.BlueHub ||
+	if score.Hub != other.Hub ||
+		score.RobotsBypassed != other.RobotsBypassed ||
 		score.PlayoffDq != other.PlayoffDq ||
 		len(score.Fouls) != len(other.Fouls) {
 		return false

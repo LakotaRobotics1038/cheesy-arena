@@ -8,6 +8,7 @@ package field
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"strings"
@@ -98,6 +99,11 @@ type Arena struct {
 	breakDescription                  string
 	preloadedTeams                    *[6]*model.Team
 	NextFoulId                        int
+	autoWinnerDetermined              bool          // Whether we've determined which alliance won AUTO for hub shifting
+	autoWinningAlliance               string        // "red" or "blue" - the alliance that scored more FUEL during AUTO
+	lastHubStatusChangeTime           time.Time     // Track when hubs last changed status for grace period
+	redHubDeactivateAt                time.Time     // When to deactivate red hub on PLC (3 seconds after hub object deactivation)
+	blueHubDeactivateAt               time.Time     // When to deactivate blue hub on PLC (3 seconds after hub object deactivation)
 }
 
 type AllianceStation struct {
@@ -272,11 +278,9 @@ func (arena *Arena) LoadSettings() error {
 	game.UpdateMatchSounds()
 	arena.MatchTimingNotifier.Notify()
 
-	game.AutoBonusCoralThreshold = settings.AutoBonusCoralThreshold
-	game.CoralBonusPerLevelThreshold = settings.CoralBonusPerLevelThreshold
-	game.CoralBonusCoopEnabled = settings.CoralBonusCoopEnabled
-	game.BargeBonusPointThreshold = settings.BargeBonusPointThreshold
-	game.IncludeAlgaeInBargeBonus = settings.IncludeAlgaeInBargeBonus
+	game.EnergizedFuelThreshold = settings.EnergizedFuelThreshold
+	game.SuperchargedFuelThreshold = settings.SuperchargedFuelThreshold
+	game.TraversalTowerThreshold = settings.TraversalTowerThreshold
 
 	// Reconstruct the playoff tournament in memory.
 	if err = arena.CreatePlayoffTournament(); err != nil {
@@ -388,6 +392,9 @@ func (arena *Arena) LoadMatch(match *model.Match) error {
 	arena.ScoringPanelRegistry.resetScoreCommitted()
 	arena.Plc.ResetMatch()
 	arena.NextFoulId = 1
+	arena.autoWinnerDetermined = false
+	arena.autoWinningAlliance = ""
+	arena.lastHubStatusChangeTime = time.Time{}
 
 	// Notify any listeners about the new match.
 	arena.MatchLoadNotifier.Notify()
@@ -758,11 +765,169 @@ func (arena *Arena) Update() {
 	// Handle field sensors/lights/actuators.
 	arena.handlePlcInputOutput()
 
+	// Update HUB status based on match phase and fuel scoring.
+	arena.updateHubStatus(matchTimeSec)
+
+	// Update LED states for both hubs
+	now := time.Now()
+	arena.RedRealtimeScore.CurrentScore.Hub.UpdateLEDState(now)
+	arena.BlueRealtimeScore.CurrentScore.Hub.UpdateLEDState(now)
+
+	// Handle hub lights on PLC (including 3-second deactivation delay)
+	arena.updateHubLights()
+	if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod || arena.MatchState == TeleopPeriod {
+		arena.Plc.SetHubLights(arena.RedRealtimeScore.CurrentScore.Hub.LEDState, arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
+	}
+
 	// Handle the team number / timer displays.
 	arena.TeamSigns.Update(arena)
 
 	arena.LastMatchTimeSec = matchTimeSec
 	arena.lastMatchState = arena.MatchState
+}
+
+// updateHubStatus manages HUB active/inactive status based on match phase and FUEL scoring.
+// According to the 2026 REBUILT game rules:
+// - AUTO: Both hubs active
+// - TRANSITION SHIFT: Both hubs active
+// - ALLIANCE SHIFTS: Hubs alternate based on which alliance scored more FUEL in AUTO
+// - END GAME: Both hubs active
+func (arena *Arena) updateHubStatus(matchTimeSec float64) {
+	// Calculate timing boundaries (all in absolute seconds from match start)
+	transitionShiftStart := float64(
+		game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec + 10,
+	)
+
+	endGameStart := float64(
+		game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec +
+			game.MatchTiming.PauseDurationSec + game.MatchTiming.TeleopDurationSec -
+			game.MatchTiming.WarningRemainingDurationSec,
+	)
+
+	// Determine which alliance scored more FUEL during AUTO
+	if arena.MatchState == PausePeriod || (arena.MatchState == TeleopPeriod && !arena.autoWinnerDetermined) {
+		if !arena.autoWinnerDetermined {
+			redFuel := arena.RedRealtimeScore.CurrentScore.Hub.AutoFuel
+			blueFuel := arena.BlueRealtimeScore.CurrentScore.Hub.AutoFuel
+
+			arena.autoWinnerDetermined = true
+			if redFuel > blueFuel {
+				arena.autoWinningAlliance = "red"
+			} else if blueFuel > redFuel {
+				arena.autoWinningAlliance = "blue"
+			} else {
+				// If tied, randomly select per FMS behavior
+				if rand.Intn(2) == 0 {
+					arena.autoWinningAlliance = "red"
+				} else {
+					arena.autoWinningAlliance = "blue"
+				}
+			}
+		}
+	}
+
+	// Update hub status based on current match phase
+	// Note: matchTimeSec is a countdown timer (higher values = earlier in match)
+	// totalMatchTime = warmup + auto + pause + teleop
+	totalMatchTime := float64(
+		game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec +
+			game.MatchTiming.PauseDurationSec + game.MatchTiming.TeleopDurationSec,
+	)
+	elapsedTime := totalMatchTime - matchTimeSec
+
+	if arena.MatchState == PreMatch || arena.MatchState == StartMatch || arena.MatchState == WarmupPeriod ||
+		arena.MatchState == AutoPeriod {
+		// AUTO: both hubs active
+		arena.setHubActive("red", true, false)
+		arena.setHubActive("blue", true, false)
+	} else if arena.MatchState == TeleopPeriod && elapsedTime < transitionShiftStart {
+		// TRANSITION SHIFT: both hubs active
+		arena.setHubActive("red", true, false)
+		arena.setHubActive("blue", true, false)
+	} else if arena.MatchState == TeleopPeriod && elapsedTime >= transitionShiftStart && elapsedTime < endGameStart-2 {
+		// ALLIANCE SHIFTS: alternate based on AUTO winner
+		// Calculate which shift we're in (0-3 for shifts 1-4)
+		// Each shift is 25 seconds
+		secIntoShifts := int(elapsedTime - transitionShiftStart)
+		shiftNumber := (secIntoShifts / 25) % 4
+		secIntoCurrentShift := secIntoShifts % 25
+
+		// Determine if hub should be active based on shift number and winner
+		var redActive, blueActive bool
+		if arena.autoWinningAlliance == "red" {
+			redActive = (shiftNumber % 2) == 1
+			blueActive = !redActive
+		} else {
+			blueActive = (shiftNumber % 2) == 1
+			redActive = !blueActive
+		}
+
+		// Set deactivation time to 3 seconds before end of shift for LED warning
+		// At 22 seconds into the shift, set deactivation time to 1 second from now (so flash starts)
+		if secIntoCurrentShift == 22 {
+			if redActive {
+				arena.RedRealtimeScore.CurrentScore.Hub.SetDeactivationTime(time.Now().Add(1 * time.Second))
+			} else {
+				arena.BlueRealtimeScore.CurrentScore.Hub.SetDeactivationTime(time.Now().Add(1 * time.Second))
+			}
+		}
+
+		// Activate/deactivate hubs based on shift
+		arena.setHubActive("red", redActive, false)
+		arena.setHubActive("blue", blueActive, false)
+	} else if arena.MatchState == TeleopPeriod && elapsedTime >= endGameStart {
+		// END GAME: both hubs active
+		arena.setHubActive("red", true, false)
+		arena.setHubActive("blue", true, false)
+	}
+}
+
+// setHubActive sets the active status of a hub and schedules PLC updates.
+func (arena *Arena) setHubActive(alliance string, isActive bool, withGracePeriod bool) {
+	var hub *game.Hub
+	if alliance == "red" {
+		hub = &arena.RedRealtimeScore.CurrentScore.Hub
+	} else {
+		hub = &arena.BlueRealtimeScore.CurrentScore.Hub
+	}
+
+	// Only update if status is changing
+	if hub.IsActive == isActive {
+		return
+	}
+
+	if isActive {
+		hub.Activate()
+		// Immediately activate on PLC
+		arena.Plc.SetHubActive(alliance, true)
+		// Clear any pending deactivation
+		if alliance == "red" {
+			arena.redHubDeactivateAt = time.Time{}
+		} else {
+			arena.blueHubDeactivateAt = time.Time{}
+		}
+	} else {
+		hub.Deactivate()
+		// Schedule PLC deactivation for 3 seconds from now
+		if alliance == "red" {
+			arena.redHubDeactivateAt = time.Now().Add(3 * time.Second)
+		} else {
+			arena.blueHubDeactivateAt = time.Now().Add(3 * time.Second)
+		}
+	}
+}
+
+// updateHubLights checks if any hub deactivation timers on the PLC have expired.
+func (arena *Arena) updateHubLights() {
+	now := time.Now()
+	if !arena.redHubDeactivateAt.IsZero() && now.After(arena.redHubDeactivateAt) {
+		arena.Plc.SetHubActive("red", false)
+		arena.redHubDeactivateAt = time.Time{}
+	}
+	if !arena.blueHubDeactivateAt.IsZero() && now.After(arena.blueHubDeactivateAt) {
+		arena.Plc.SetHubActive("blue", false)
+		arena.blueHubDeactivateAt = time.Time{}
+	}
 }
 
 // Checks if the endgame warning period has started and triggers the Companion event if so.
@@ -1136,45 +1301,9 @@ func (arena *Arena) handlePlcInputOutput() {
 	// Get all the game-specific inputs and update the score.
 	if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod || arena.MatchState == TeleopPeriod ||
 		inGracePeriod {
-		redScore.ProcessorAlgae, blueScore.ProcessorAlgae = arena.Plc.GetProcessorCounts()
 	}
 	if !oldRedScore.Equals(redScore) || !oldBlueScore.Equals(blueScore) {
 		arena.RealtimeScoreNotifier.Notify()
-	}
-
-	// Handle the truss lights.
-	if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod || arena.MatchState == TeleopPeriod {
-		warningSequenceActive, lights := trussLightWarningSequence(arena.MatchTimeSec())
-		if warningSequenceActive {
-			arena.Plc.SetTrussLights(lights, lights)
-		} else {
-			if !game.CoralBonusCoopEnabled || arena.CurrentMatch.Type == model.Playoff {
-				// Just leave the lights on all match if co-op is not enabled for this match (or event).
-				arena.Plc.SetTrussLights([3]bool{true, true, true}, [3]bool{true, true, true})
-			} else {
-				// Set the lights to reflect co-op status.
-				if arena.RedScoreSummary().CoopertitionBonus && arena.BlueScoreSummary().CoopertitionBonus {
-					arena.Plc.SetTrussLights([3]bool{true, true, true}, [3]bool{true, true, true})
-				} else {
-					arena.Plc.SetTrussLights(
-						[3]bool{
-							arena.RedRealtimeScore.CurrentScore.ProcessorAlgae >= 1,
-							arena.RedRealtimeScore.CurrentScore.ProcessorAlgae >= 2,
-							false,
-						},
-						[3]bool{
-							arena.BlueRealtimeScore.CurrentScore.ProcessorAlgae >= 1,
-							arena.BlueRealtimeScore.CurrentScore.ProcessorAlgae >= 2,
-							false,
-						},
-					)
-				}
-			}
-		}
-	} else {
-		arena.Plc.SetTrussLights(
-			[3]bool{inGracePeriod, inGracePeriod, inGracePeriod}, [3]bool{inGracePeriod, inGracePeriod, inGracePeriod},
-		)
 	}
 }
 

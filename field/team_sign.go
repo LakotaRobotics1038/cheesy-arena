@@ -187,46 +187,129 @@ func (sign *TeamSign) update(
 // Returns the in-match rear text for the team number display that is common to the whole given alliance.
 func generateInMatchTeamRearText(arena *Arena, isRed bool, countdown string) string {
 	var realtimeScore, opponentRealtimeScore *RealtimeScore
-	var formatString string
 	if isRed {
 		realtimeScore = arena.RedRealtimeScore
 		opponentRealtimeScore = arena.BlueRealtimeScore
-		formatString = "R%03d-B%03d"
 	} else {
 		realtimeScore = arena.BlueRealtimeScore
 		opponentRealtimeScore = arena.RedRealtimeScore
-		formatString = "B%03d-R%03d"
-	}
-	scoreSummary := realtimeScore.CurrentScore.Summarize(&opponentRealtimeScore.CurrentScore)
-	scoreTotal := scoreSummary.Score - scoreSummary.BargePoints
-	opponentScoreSummary := opponentRealtimeScore.CurrentScore.Summarize(&realtimeScore.CurrentScore)
-	opponentScoreTotal := opponentScoreSummary.Score - opponentScoreSummary.BargePoints
-	allianceScores := fmt.Sprintf(formatString, scoreTotal, opponentScoreTotal)
-
-	var coralRankingPointProgress string
-	if arena.CurrentMatch.Type != model.Playoff {
-		coralRankingPointProgress = fmt.Sprintf("%d/%d", scoreSummary.NumCoralLevels, scoreSummary.NumCoralLevelsGoal)
 	}
 
-	return fmt.Sprintf("%s %s %s", countdown, allianceScores, coralRankingPointProgress)
+	// Determine SHIFT indicator based on HUB active states
+	var shiftIndicator string
+	redHub := &arena.RedRealtimeScore.CurrentScore.Hub
+	blueHub := &arena.BlueRealtimeScore.CurrentScore.Hub
+	bothActive := redHub.IsActive && blueHub.IsActive
+
+	switch arena.MatchState {
+	case AutoPeriod:
+		if bothActive {
+			shiftIndicator = "A"
+		} else if redHub.IsActive {
+			shiftIndicator = "R"
+		} else if blueHub.IsActive {
+			shiftIndicator = "B"
+		}
+	case PausePeriod:
+		// TRANSITION SHIFT
+		if bothActive {
+			shiftIndicator = "T"
+		} else if redHub.IsActive {
+			shiftIndicator = "R"
+		} else if blueHub.IsActive {
+			shiftIndicator = "B"
+		}
+	case TeleopPeriod:
+		// Check if we're in END GAME (last 20 seconds)
+		matchTimeSec := int(arena.MatchTimeSec())
+		timeRemaining := game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec +
+			game.MatchTiming.TeleopDurationSec + game.MatchTiming.PauseDurationSec - matchTimeSec
+		if timeRemaining <= game.MatchTiming.WarningRemainingDurationSec {
+			// END GAME period
+			if bothActive {
+				shiftIndicator = "E"
+			} else if redHub.IsActive {
+				shiftIndicator = "R"
+			} else if blueHub.IsActive {
+				shiftIndicator = "B"
+			}
+		} else {
+			// Regular TELEOP
+			if bothActive {
+				shiftIndicator = "T"
+			} else if redHub.IsActive {
+				shiftIndicator = "R"
+			} else if blueHub.IsActive {
+				shiftIndicator = "B"
+			}
+		}
+	}
+
+	if arena.CurrentMatch.Type == model.Qualification {
+		// Qualification match: show SHIFT, FUEL progress, AUTO TOWER points
+		totalFuel := redHub.TotalFuel() + blueHub.TotalFuel()
+
+		// Determine which threshold to show for FUEL progress
+		var fuelThreshold int
+		if totalFuel < arena.EventSettings.EnergizedFuelThreshold {
+			fuelThreshold = arena.EventSettings.EnergizedFuelThreshold
+		} else {
+			fuelThreshold = arena.EventSettings.SuperchargedFuelThreshold
+		}
+
+		// Get AUTO TOWER points from our alliance's hub
+		var hub *game.Hub
+		if isRed {
+			hub = redHub
+		} else {
+			hub = blueHub
+		}
+		autoTowerPoints := hub.AutoTowerPoints()
+
+		return fmt.Sprintf("%s %s F%d/%d T%d", countdown, shiftIndicator, totalFuel, fuelThreshold, autoTowerPoints)
+	} else {
+		// Playoff match: show match scores
+		scoreSummary := realtimeScore.CurrentScore.Summarize(&opponentRealtimeScore.CurrentScore)
+		opponentScoreSummary := opponentRealtimeScore.CurrentScore.Summarize(&realtimeScore.CurrentScore)
+		var formatString string
+		if isRed {
+			formatString = "R%03d-B%03d"
+		} else {
+			formatString = "B%03d-R%03d"
+		}
+		allianceScores := fmt.Sprintf(formatString, scoreSummary.MatchPoints, opponentScoreSummary.MatchPoints)
+		return fmt.Sprintf("%s %s %s", countdown, shiftIndicator, allianceScores)
+	}
 }
 
 // Returns the in-match rear text for the timer display for the given alliance.
 func generateInMatchTimerRearText(arena *Arena, isRed bool) string {
-	var reef *game.Reef
-	if isRed {
-		reef = &arena.RedRealtimeScore.CurrentScore.Reef
-	} else {
-		reef = &arena.BlueRealtimeScore.CurrentScore.Reef
-	}
+	redScore := arena.RedRealtimeScore
+	blueScore := arena.BlueRealtimeScore
 
-	return fmt.Sprintf(
-		"1-%02d 2-%02d 3-%02d 4-%02d",
-		reef.CountTotalCoralByLevel(game.Level1),
-		reef.CountTotalCoralByLevel(game.Level2),
-		reef.CountTotalCoralByLevel(game.Level3),
-		reef.CountTotalCoralByLevel(game.Level4),
-	)
+	if arena.CurrentMatch.Type == model.Qualification {
+		// Qualification: show FUEL and TOWER information
+		totalFuel := redScore.CurrentScore.Hub.TotalFuel() + blueScore.CurrentScore.Hub.TotalFuel()
+
+		var hub *game.Hub
+		if isRed {
+			hub = &redScore.CurrentScore.Hub
+		} else {
+			hub = &blueScore.CurrentScore.Hub
+		}
+
+		towerLevel := hub.TeleopTowerLevel
+		if towerLevel == game.TowerLevelNone {
+			towerLevel = hub.AutoTowerLevel
+		}
+
+		return fmt.Sprintf("FUEL: %d TOWER: %d", totalFuel, towerLevel)
+	} else {
+		// Playoff: show match scores
+		redSummary := redScore.CurrentScore.Summarize(&blueScore.CurrentScore)
+		blueSummary := blueScore.CurrentScore.Summarize(&redScore.CurrentScore)
+		return fmt.Sprintf("%03d-%03d", redSummary.MatchPoints, blueSummary.MatchPoints)
+	}
 }
 
 // Returns the front text, front color, and rear text to display on the timer display.

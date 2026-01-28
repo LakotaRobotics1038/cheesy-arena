@@ -38,91 +38,52 @@ UI for manually editing the result for a match.
       </div>
       {{end}}
     </div>
-    <h6 class="fw-bold mb-2">Leave</h6>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>FUEL Scoring</legend>
     <div class="row mb-3">
-      {{range $i := seq 3}}
-      <div class="col-lg-2">
-        <label class="control-label">Team {{"{{team"}}{{$i}}{{"}}"}}</label>
-        <input type="checkbox" class="ms-3" name="{{"{{alliance}}"}}LeaveStatuses{{$i}}">
-      </div>
-      {{end}}
-    </div>
-  </fieldset>
-  <fieldset>
-    <legend>Reef</legend>
-    <div class="row mb-2">
-      <div class="col-lg-1"></div>
-      <div class="row col-lg-11">
-        <label class="col-lg-1 control-label">A</label>
-        <label class="col-lg-1 control-label">B</label>
-        <label class="col-lg-1 control-label">C</label>
-        <label class="col-lg-1 control-label">D</label>
-        <label class="col-lg-1 control-label">E</label>
-        <label class="col-lg-1 control-label">F</label>
-        <label class="col-lg-1 control-label">G</label>
-        <label class="col-lg-1 control-label">H</label>
-        <label class="col-lg-1 control-label">I</label>
-        <label class="col-lg-1 control-label">J</label>
-        <label class="col-lg-1 control-label">K</label>
-        <label class="col-lg-1 control-label">L</label>
-      </div>
-    </div>
-    {{template "reefPipe" dict "pipe" 2 "pipeName" "Level 4"}}
-    {{template "reefPipe" dict "pipe" 1 "pipeName" "Level 3"}}
-    {{template "reefPipe" dict "pipe" 0 "pipeName" "Level 2"}}
-    <div class="row mb-3">
-      <label class="col-lg-1 control-label">Level 1</label>
-      <label class="col-lg-1 text-end">Auto Near:</label>
+      <label class="col-lg-2 text-end">Auto FUEL:</label>
       <div class="col-lg-1">
-        <input type="text" class="form-control input-sm" name="{{"{{alliance}}"}}AutoTroughNearCoral">
+        <input type="text" class="form-control input-sm" name="{{"{{alliance}}"}}AutoFuel">
       </div>
-      <label class="col-lg-1 text-end">Auto Far:</label>
+      <label class="col-lg-2 text-end">Teleop FUEL:</label>
       <div class="col-lg-1">
-        <input type="text" class="form-control input-sm" name="{{"{{alliance}}"}}AutoTroughFarCoral">
-      </div>
-      <label class="col-lg-1 text-end"> Near:</label>
-      <div class="col-lg-1">
-        <input type="text" class="form-control input-sm" name="{{"{{alliance}}"}}TroughNearCoral">
-      </div>
-      <label class="col-lg-1 text-end"> Far:</label>
-      <div class="col-lg-1">
-        <input type="text" class="form-control input-sm" name="{{"{{alliance}}"}}TroughFarCoral">
+        <input type="text" class="form-control input-sm" name="{{"{{alliance}}"}}TeleopFuel">
       </div>
     </div>
   </fieldset>
   <fieldset>
-    <legend>Algae</legend>
-    <div class="row">
-      <label class="col-lg-1 text-end">Barge:</label>
-      <div class="col-lg-1">
-        <input type="text" class="form-control input-sm" name="{{"{{alliance}}"}}BargeAlgae">
-      </div>
-      <label class="col-lg-1 text-end">Processor:</label>
-      <div class="col-lg-1">
-        <input type="text" class="form-control input-sm" name="{{"{{alliance}}"}}ProcessorAlgae">
-      </div>
-    </div>
-  </fieldset>
-  <fieldset>
-    <legend>Endgame</legend>
+    <legend>TOWER Climbing</legend>
     <div class="mb-3">
-      {{range $i := seq 3}}
       <div class="row mb-2">
-        <label class="col-lg-1 control-label">Team {{"{{team"}}{{$i}}{{"}}"}}</label>
-        <div class="col-lg-1">
-          <input type="radio" name="{{"{{alliance}}"}}EndgameStatuses{{$i}}" value="0"> None
-        </div>
-        <div class="col-lg-2">
-          <input type="radio" name="{{"{{alliance}}"}}EndgameStatuses{{$i}}" value="1"> Parked
-        </div>
-        <div class="col-lg-2">
-          <input type="radio" name="{{"{{alliance}}"}}EndgameStatuses{{$i}}" value="2"> Shallow Cage
-        </div>
-        <div class="col-lg-2">
-          <input type="radio" name="{{"{{alliance}}"}}EndgameStatuses{{$i}}" value="3"> Deep Cage
+        <label class="col-lg-3 control-label">Auto TOWER Level</label>
+        <div class="col-lg-9">
+          <div class="form-check">
+            <input type="radio" class="form-check-input" name="{{"{{alliance}}"}}AutoTowerLevel" value="0"> None
+          </div>
+          <div class="form-check">
+            <input type="radio" class="form-check-input" name="{{"{{alliance}}"}}AutoTowerLevel" value="1"> Level 1
+          </div>
         </div>
       </div>
-      {{end}}
+      <div class="row mb-2">
+        <label class="col-lg-3 control-label">Teleop TOWER Level</label>
+        <div class="col-lg-9">
+          <div class="form-check">
+            <input type="radio" class="form-check-input" name="{{"{{alliance}}"}}TeleopTowerLevel" value="0"> None
+          </div>
+          <div class="form-check">
+            <input type="radio" class="form-check-input" name="{{"{{alliance}}"}}TeleopTowerLevel" value="1"> Level 1
+          </div>
+          <div class="form-check">
+            <input type="radio" class="form-check-input" name="{{"{{alliance}}"}}TeleopTowerLevel" value="2"> Level 2
+          </div>
+          <div class="form-check">
+            <input type="radio" class="form-check-input" name="{{"{{alliance}}"}}TeleopTowerLevel" value="3"> Level 3
+          </div>
+        </div>
+      </div>
     </div>
   </fieldset>
   <fieldset>
@@ -250,26 +211,4 @@ Add Foul
   renderResults("blue");
   <!-- @formatter:on -->
 </script>
-{{end}}
-{{define "reefPipe"}}
-<div class="row">
-  <label class="col-lg-1">{{.pipeName}}</label>
-  <div class="row col-lg-11">
-    {{range $i := seq 12}}
-    {{template "reefBranch" dict "pipe" $.pipe "level" (add $i -1)}}
-    {{end}}
-  </div>
-</div>
-<br/>
-{{end}}
-{{define "reefBranch"}}
-<div class="col-lg-1">
-  <input type="checkbox" class="" name="{{"{{alliance}}"}}ReefAutoBranchesPipe{{.pipe}}Branch{{.level}}"
-  id="{{"{{alliance}}"}}AutoPipe{{.pipe}}Branch{{.level}}">
-  <label for="{{"{{alliance}}"}}AutoPipe{{.pipe}}Branch{{.level}}">Auto</label>
-  <br/>
-  <input type="checkbox" class="" name="{{"{{alliance}}"}}ReefBranchesPipe{{.pipe}}Branch{{.level}}"
-  id="{{"{{alliance}}"}}Pipe{{.pipe}}Branch{{.level}}">
-  <label for="{{"{{alliance}}"}}Pipe{{.pipe}}Branch{{.level}}">Overall</label>
-</div>
 {{end}}

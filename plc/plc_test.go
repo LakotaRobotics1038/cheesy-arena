@@ -4,10 +4,11 @@
 package plc
 
 import (
+	"testing"
+
 	"github.com/Team254/cheesy-arena/websocket"
 	"github.com/goburrow/modbus"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestPlcInitialization(t *testing.T) {
@@ -90,8 +91,8 @@ func TestPlcGetNames(t *testing.T) {
 		t,
 		[]string{
 			"fieldIoConnection",
-			"redProcessor",
-			"blueProcessor",
+			"redHub",
+			"blueHub",
 		},
 		plc.GetRegisterNames(),
 	)
@@ -107,12 +108,8 @@ func TestPlcGetNames(t *testing.T) {
 			"stackLightBlue",
 			"stackLightBuzzer",
 			"fieldResetLight",
-			"redTrussLightOuter",
-			"redTrussLightMiddle",
-			"redTrussLightInner",
-			"blueTrussLightOuter",
-			"blueTrussLightMiddle",
-			"blueTrussLightInner",
+			"redHubLight",
+			"blueHubLight",
 		},
 		plc.GetCoilNames(),
 	)
@@ -347,19 +344,19 @@ func TestPlcRegistersGameSpecific(t *testing.T) {
 	client.registers[1] = 0
 	client.registers[2] = 0
 	plc.update()
-	redProcessor, blueProcessor := plc.GetProcessorCounts()
-	assert.Equal(t, 0, redProcessor)
-	assert.Equal(t, 0, blueProcessor)
+	redHub, blueHub := plc.GetHubCounts()
+	assert.Equal(t, 0, redHub)
+	assert.Equal(t, 0, blueHub)
 	client.registers[1] = 12
 	plc.update()
-	redProcessor, blueProcessor = plc.GetProcessorCounts()
-	assert.Equal(t, 12, redProcessor)
-	assert.Equal(t, 0, blueProcessor)
+	redHub, blueHub = plc.GetHubCounts()
+	assert.Equal(t, 12, redHub)
+	assert.Equal(t, 0, blueHub)
 	client.registers[2] = 34
 	plc.update()
-	redProcessor, blueProcessor = plc.GetProcessorCounts()
-	assert.Equal(t, 12, redProcessor)
-	assert.Equal(t, 34, blueProcessor)
+	redHub, blueHub = plc.GetHubCounts()
+	assert.Equal(t, 12, redHub)
+	assert.Equal(t, 34, blueHub)
 }
 
 func TestPlcCoils(t *testing.T) {
@@ -376,14 +373,14 @@ func TestPlcCoils(t *testing.T) {
 	assert.Equal(t, false, client.coils[1])
 	client.registers[fieldIoConnection] = 31
 	plc.registers[fieldIoConnection] = 31
-	plc.registers[redProcessor] = 1
-	plc.registers[blueProcessor] = 2
+	plc.registers[redHub] = 1
+	plc.registers[blueHub] = 2
 	plc.ResetMatch()
 	plc.update()
 	assert.Equal(t, true, client.coils[1])
 	assert.Equal(t, 31, int(plc.registers[fieldIoConnection]))
-	assert.Equal(t, 0, int(plc.registers[redProcessor]))
-	assert.Equal(t, 0, int(plc.registers[blueProcessor]))
+	assert.Equal(t, 0, int(plc.registers[redHub]))
+	assert.Equal(t, 0, int(plc.registers[blueHub]))
 
 	plc.SetStackLights(false, false, false, false)
 	plc.update()
@@ -438,27 +435,25 @@ func TestPlcCoilsGameSpecific(t *testing.T) {
 	plc.handler = modbus.NewTCPClientHandler("dummy")
 	plc.ioChangeNotifier = &websocket.Notifier{}
 
-	plc.SetTrussLights([3]bool{false, false, false}, [3]bool{false, false, false})
+	plc.SetHubLights(false, false)
 	plc.update()
-	assert.Equal(t, []bool{false, false, false, false, false, false}, client.coils[8:14])
-	plc.SetTrussLights([3]bool{true, false, false}, [3]bool{false, false, false})
+	assert.Equal(t, false, client.coils[8])
+	assert.Equal(t, false, client.coils[9])
+
+	plc.SetHubLights(true, false)
 	plc.update()
-	assert.Equal(t, []bool{true, false, false, false, false, false}, client.coils[8:14])
-	plc.SetTrussLights([3]bool{true, true, false}, [3]bool{false, false, false})
+	assert.Equal(t, true, client.coils[8])
+	assert.Equal(t, false, client.coils[9])
+
+	plc.SetHubLights(false, true)
 	plc.update()
-	assert.Equal(t, []bool{true, true, false, false, false, false}, client.coils[8:14])
-	plc.SetTrussLights([3]bool{true, true, true}, [3]bool{false, false, false})
+	assert.Equal(t, false, client.coils[8])
+	assert.Equal(t, true, client.coils[9])
+
+	plc.SetHubLights(true, true)
 	plc.update()
-	assert.Equal(t, []bool{true, true, true, false, false, false}, client.coils[8:14])
-	plc.SetTrussLights([3]bool{true, true, true}, [3]bool{true, false, false})
-	plc.update()
-	assert.Equal(t, []bool{true, true, true, true, false, false}, client.coils[8:14])
-	plc.SetTrussLights([3]bool{true, true, true}, [3]bool{true, true, false})
-	plc.update()
-	assert.Equal(t, []bool{true, true, true, true, true, false}, client.coils[8:14])
-	plc.SetTrussLights([3]bool{true, true, true}, [3]bool{true, true, true})
-	plc.update()
-	assert.Equal(t, []bool{true, true, true, true, true, true}, client.coils[8:14])
+	assert.Equal(t, true, client.coils[8])
+	assert.Equal(t, true, client.coils[9])
 }
 
 func TestPlcIsHealthy(t *testing.T) {

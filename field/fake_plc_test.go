@@ -22,10 +22,12 @@ type FakePlc struct {
 	stackLightBuzzer      bool
 	fieldResetLight       bool
 	cycleState            bool
-	redProcessorCount     int
-	blueProcessorCount    int
-	redTrussLights        [3]bool
-	blueTrussLights       [3]bool
+	redHubCount           int
+	blueHubCount          int
+	redHubLight           bool
+	blueHubLight          bool
+	redHubActive          bool
+	blueHubActive         bool
 }
 
 func (plc *FakePlc) SetAddress(address string) {
@@ -100,11 +102,22 @@ func (plc *FakePlc) GetCoilNames() []string {
 	return []string{}
 }
 
-func (plc *FakePlc) GetProcessorCounts() (int, int) {
-	return plc.redProcessorCount, plc.blueProcessorCount
+func (plc *FakePlc) GetHubCounts() (int, int) {
+	return plc.redHubCount, plc.blueHubCount
 }
 
-func (plc *FakePlc) SetTrussLights(redLights, blueLights [3]bool) {
-	plc.redTrussLights = redLights
-	plc.blueTrussLights = blueLights
+func (plc *FakePlc) SetHubLights(redActive, blueActive bool) {
+	plc.redHubLight = redActive
+	plc.blueHubLight = blueActive
+}
+
+func (plc *FakePlc) SetHubActive(alliance string, active bool) {
+	switch alliance {
+	case "red":
+		plc.redHubActive = active
+		plc.redHubLight = active
+	case "blue":
+		plc.blueHubActive = active
+		plc.blueHubLight = active
+	}
 }

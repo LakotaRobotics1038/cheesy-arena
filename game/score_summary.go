@@ -8,6 +8,7 @@ package game
 type ScoreSummary struct {
 	FuelPoints             int
 	NumFuel                int
+	AutoFuelPoints         int
 	TowerPoints            int
 	MatchPoints            int
 	FoulPoints             int
@@ -40,16 +41,19 @@ func DetermineMatchStatus(redScoreSummary, blueScoreSummary *ScoreSummary, apply
 	}
 
 	if applyPlayoffTiebreakers {
-		// Check scoring breakdowns to resolve playoff ties.
+		// Check scoring breakdowns to resolve playoff ties (2026 playoff tiebreaker rules).
+		// 1. Fewest opponent major fouls
 		if status := comparePoints(
 			redScoreSummary.NumOpponentMajorFouls, blueScoreSummary.NumOpponentMajorFouls,
 		); status != TieMatch {
 			return status
 		}
-		if status := comparePoints(redScoreSummary.TowerPoints, blueScoreSummary.TowerPoints); status != TieMatch {
+		// 2. Most AUTO fuel points
+		if status := comparePoints(redScoreSummary.AutoFuelPoints, blueScoreSummary.AutoFuelPoints); status != TieMatch {
 			return status
 		}
-		if status := comparePoints(redScoreSummary.FuelPoints, blueScoreSummary.FuelPoints); status != TieMatch {
+		// 3. Most tower points
+		if status := comparePoints(redScoreSummary.TowerPoints, blueScoreSummary.TowerPoints); status != TieMatch {
 			return status
 		}
 	}

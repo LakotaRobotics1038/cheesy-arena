@@ -23,6 +23,7 @@ func TestCalculateRankings(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, updatedRankings, rankings)
 	if assert.Equal(t, 6, len(rankings)) {
+		// Rankings for 2026 game with FUEL and TOWER tiebreakers
 		assert.Equal(t, 4, rankings[0].TeamId)
 		assert.Equal(t, 0, rankings[0].PreviousRank)
 		assert.Equal(t, 6, rankings[1].TeamId)
@@ -55,6 +56,7 @@ func TestCalculateRankings(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, updatedRankings, rankings)
 	if assert.Equal(t, 6, len(rankings)) {
+		// Rankings after match result change - 2026 game
 		assert.Equal(t, 6, rankings[0].TeamId)
 		assert.Equal(t, previousRankings[rankings[0].TeamId], rankings[0].PreviousRank)
 		assert.Equal(t, 5, rankings[1].TeamId)

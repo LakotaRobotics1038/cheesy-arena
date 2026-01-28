@@ -179,23 +179,23 @@ const handleRealtimeScore = function (data) {
     const i1 = i + 1;
     for (let j = 0; j < 3; j++) {
       const j2 = j + 2;
-      $(`#reef-column-${i1}`).attr(`data-l${j2}-scored`, score.Reef.Branches[j][i]);
-      $(`#reef-column-${i1}`).attr(`data-l${j2}-auto-scored`, score.Reef.AutoBranches[j][i]);
+      $(`#hub-column-${i1}`).attr(`data-l${j2}-scored`, score.Hub.Branches[j][i]);
+      $(`#hub-column-${i1}`).attr(`data-l${j2}-auto-scored`, score.Hub.AutoBranches[j][i]);
     }
   }
 
-  const l1Total = score.Reef.TroughNear + score.Reef.TroughFar;
+  const l1Total = score.Hub.TroughNear + score.Hub.TroughFar;
   $("#l1-total-count").text(l1Total);
   
-  $(`#barge .counter-value`).text(score.BargeAlgae);
-  $(`#processor .counter-value`).text(score.ProcessorAlgae);
+  $(`#barge .counter-value`).text(score.Hub.TeleopFuel);
+  $(`#processor .counter-value`).text(score.Hub.AutoFuel);
 
   if (nearSide) {
-    $(`#trough .counter-value`).text(score.Reef.TroughNear);
-    $(`#trough .counter-auto-value`).text(score.Reef.AutoTroughNear);
+    $(`#trough .counter-value`).text(score.Hub.TroughNear);
+    $(`#trough .counter-auto-value`).text(score.Hub.AutoTroughNear);
   } else {
-    $(`#trough .counter-value`).text(score.Reef.TroughFar);
-    $(`#trough .counter-auto-value`).text(score.Reef.AutoTroughFar);
+    $(`#trough .counter-value`).text(score.Hub.TroughFar);
+    $(`#trough .counter-auto-value`).text(score.Hub.AutoTroughFar);
   }
 
   redFouls = data.Red.Score.Fouls || [];
@@ -221,10 +221,10 @@ const handleLeaveClick = function (teamPosition) {
 const handleEndgameClick = function (teamPosition, endgameStatus) {
   websocket.send("endgame", {TeamPosition: teamPosition, EndgameStatus: endgameStatus});
 }
-const handleReefClick = function (reefPosition, reefLevel) {
+const handleHubClick = function (hubPosition, towerLevel) {
   websocket.send("reef", {
-    ReefPosition: reefPosition,
-    ReefLevel: reefLevel,
+    ReefPosition: hubPosition,
+    ReefLevel: towerLevel,
     Current: !editingAuto,
     Autonomous: !inTeleop || editingAuto,
     NearSide: nearSide

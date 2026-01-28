@@ -16,18 +16,11 @@ func TestScore1() *Score {
 		{7, true, 25, 15},
 	}
 	return &Score{
-		RedHub: Hub{
+		Hub: Hub{
 			AutoFuel:         5,
 			TeleopFuel:       8,
 			AutoTowerLevel:   TowerLevel1,
 			TeleopTowerLevel: TowerLevel2,
-			IsActive:         true,
-		},
-		BlueHub: Hub{
-			AutoFuel:         3,
-			TeleopFuel:       6,
-			AutoTowerLevel:   TowerLevelNone,
-			TeleopTowerLevel: TowerLevel1,
 			IsActive:         true,
 		},
 		Fouls:     fouls,
@@ -37,18 +30,11 @@ func TestScore1() *Score {
 
 func TestScore2() *Score {
 	return &Score{
-		RedHub: Hub{
+		Hub: Hub{
 			AutoFuel:         2,
 			TeleopFuel:       10,
 			AutoTowerLevel:   TowerLevelNone,
 			TeleopTowerLevel: TowerLevel3,
-			IsActive:         true,
-		},
-		BlueHub: Hub{
-			AutoFuel:         7,
-			TeleopFuel:       9,
-			AutoTowerLevel:   TowerLevel1,
-			TeleopTowerLevel: TowerLevel2,
 			IsActive:         true,
 		},
 		Fouls:     []Foul{},
@@ -57,9 +43,9 @@ func TestScore2() *Score {
 }
 
 func TestRanking1() *Ranking {
-	return &Ranking{254, 1, 0, RankingFields{20, 625, 90, 554, 0.254, 3, 2, 1, 0, 10}}
+	return &Ranking{254, 1, 0, RankingFields{20, 90, 65, 35, 0.254, 3, 2, 1, 0, 10}}
 }
 
 func TestRanking2() *Ranking {
-	return &Ranking{1114, 2, 1, RankingFields{18, 700, 625, 230, 0.1114, 1, 3, 2, 0, 10}}
+	return &Ranking{1114, 2, 1, RankingFields{18, 78, 55, 30, 0.1114, 1, 3, 2, 0, 10}}
 }

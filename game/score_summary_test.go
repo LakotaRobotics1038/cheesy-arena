@@ -24,28 +24,28 @@ func TestDetermineMatchStatus(t *testing.T) {
 	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
 	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
-	// Test playoff tiebreakers.
+	// Test playoff tiebreakers (2026 rules: OpponentMajorFouls → AutoFuel → Tower).
 	redScoreSummary.Score = 10
+	redScoreSummary.AutoFuelPoints = 7
+	blueScoreSummary.AutoFuelPoints = 5
+	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
+	assert.Equal(t, RedWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
+
+	redScoreSummary.AutoFuelPoints = 5
+	blueScoreSummary.AutoFuelPoints = 8
+	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
+	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
+
+	blueScoreSummary.AutoFuelPoints = 5
 	redScoreSummary.TowerPoints = 35
 	blueScoreSummary.TowerPoints = 30
-	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
 	assert.Equal(t, RedWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
 	redScoreSummary.TowerPoints = 30
 	blueScoreSummary.TowerPoints = 40
-	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
 	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
 
 	blueScoreSummary.TowerPoints = 30
-	redScoreSummary.FuelPoints = 50
-	blueScoreSummary.FuelPoints = 40
-	assert.Equal(t, RedWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
-
-	redScoreSummary.FuelPoints = 40
-	blueScoreSummary.FuelPoints = 50
-	assert.Equal(t, BlueWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))
-
-	blueScoreSummary.FuelPoints = 40
 	redScoreSummary.NumOpponentMajorFouls = 2
 	blueScoreSummary.NumOpponentMajorFouls = 0
 	assert.Equal(t, RedWonMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, true))

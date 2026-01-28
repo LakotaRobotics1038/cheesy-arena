@@ -31,26 +31,15 @@ const renderResults = function (alliance) {
   $(`#${alliance}Score`).html(scoreContent);
 
   // Set the values of the form fields from the JSON results data.
-  getInputElement(alliance, "AutoTroughNearCoral").val(result.score.Reef.AutoTroughNear);
-  getInputElement(alliance, "AutoTroughFarCoral").val(result.score.Reef.AutoTroughFar);
-  getInputElement(alliance, "TroughNearCoral").val(result.score.Reef.TroughNear);
-  getInputElement(alliance, "TroughFarCoral").val(result.score.Reef.TroughFar);
-  getInputElement(alliance, "BargeAlgae").val(result.score.BargeAlgae);
-  getInputElement(alliance, "ProcessorAlgae").val(result.score.ProcessorAlgae);
+  getInputElement(alliance, "AutoFuel").val(result.score.Hub.AutoFuel);
+  getInputElement(alliance, "TeleopFuel").val(result.score.Hub.TeleopFuel);
 
   for (let i = 0; i < 3; i++) {
     const i1 = i + 1;
 
     getInputElement(alliance, `RobotsBypassed${i1}`).prop("checked", result.score.RobotsBypassed[i]);
-    getInputElement(alliance, `LeaveStatuses${i1}`).prop("checked", result.score.LeaveStatuses[i]);
-    getInputElement(alliance, `EndgameStatuses${i1}`, result.score.EndgameStatuses[i]).prop("checked", true);
-
-    for (let j = 0; j < 12; j++) {
-      getInputElement(alliance, `ReefAutoBranchesPipe${i}Branch${j}`).prop(
-        "checked", result.score.Reef.AutoBranches[i][j]
-      );
-      getInputElement(alliance, `ReefBranchesPipe${i}Branch${j}`).prop("checked", result.score.Reef.Branches[i][j]);
-    }
+    getInputElement(alliance, `AutoTowerLevel${i1}`, result.score.Hub.AutoTowerLevel).prop("checked", true);
+    getInputElement(alliance, `TeleopTowerLevel${i1}`, result.score.Hub.TeleopTowerLevel).prop("checked", true);
   }
 
   if (result.score.Fouls != null) {
@@ -77,30 +66,17 @@ const updateResults = function (alliance) {
   });
 
   result.score.RobotsBypassed = [];
-  result.score.LeaveStatuses = [];
-  result.score.Reef = {
-    AutoBranches: [],
-    Branches: [],
-    AutoTroughNear: parseInt(formData[`${alliance}AutoTroughNearCoral`]),
-    AutoTroughFar: parseInt(formData[`${alliance}AutoTroughFarCoral`]),
-    TroughNear: parseInt(formData[`${alliance}TroughNearCoral`]),
-    TroughFar: parseInt(formData[`${alliance}TroughFarCoral`]),
+  result.score.Hub = {
+    AutoFuel: parseInt(formData[`${alliance}AutoFuel`]) || 0,
+    TeleopFuel: parseInt(formData[`${alliance}TeleopFuel`]) || 0,
+    AutoTowerLevel: parseInt(formData[`${alliance}AutoTowerLevel`]) || 0,
+    TeleopTowerLevel: parseInt(formData[`${alliance}TeleopTowerLevel`]) || 0,
   };
-  result.score.BargeAlgae = parseInt(formData[`${alliance}BargeAlgae`]);
-  result.score.ProcessorAlgae = parseInt(formData[`${alliance}ProcessorAlgae`]);
-  result.score.EndgameStatuses = [];
+
   for (let i = 0; i < 3; i++) {
     const i1 = i + 1;
 
     result.score.RobotsBypassed[i] = formData[`${alliance}RobotsBypassed${i1}`] === "on";
-    result.score.LeaveStatuses[i] = formData[`${alliance}LeaveStatuses${i1}`] === "on";
-    result.score.EndgameStatuses[i] = parseInt(formData[`${alliance}EndgameStatuses${i1}`]);
-    result.score.Reef.AutoBranches[i] = [];
-    result.score.Reef.Branches[i] = [];
-    for (let j = 0; j < 12; j++) {
-      result.score.Reef.AutoBranches[i][j] = formData[`${alliance}ReefAutoBranchesPipe${i}Branch${j}`] === "on";
-      result.score.Reef.Branches[i][j] = formData[`${alliance}ReefBranchesPipe${i}Branch${j}`] === "on";
-    }
   }
 
   result.score.Fouls = [];

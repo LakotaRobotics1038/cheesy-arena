@@ -218,38 +218,24 @@ UI for configuring event settings.
                 </div>
               </div>
               <div class="row mb-3">
-                <label class="col-lg-6 control-label">Auto Bonus RP Coral Threshold</label>
+                <label class="col-lg-6 control-label">Energized FUEL Threshold</label>
                 <div class="col-lg-6">
-                  <input type="text" class="form-control" id="autoBonusCoralThreshold" name="autoBonusCoralThreshold"
-                    value="{{.AutoBonusCoralThreshold}}">
+                  <input type="text" class="form-control" id="energizedFuelThreshold" name="energizedFuelThreshold"
+                    value="{{.EnergizedFuelThreshold}}">
                 </div>
               </div>
               <div class="row mb-3">
-                <label class="col-lg-6 control-label">Coopertition Bonus Enabled</label>
-                <div class="col-lg-1 checkbox">
-                  <input type="checkbox" id="coralBonusCoopEnabled"
-                    name="coralBonusCoopEnabled" {{if .CoralBonusCoopEnabled}} checked{{end}}>
+                <label class="col-lg-6 control-label">Supercharged FUEL Threshold</label>
+                <div class="col-lg-6">
+                  <input type="text" class="form-control" id="superchargedFuelThreshold" name="superchargedFuelThreshold"
+                    value="{{.SuperchargedFuelThreshold}}">
                 </div>
               </div>
               <div class="row mb-3">
-                <label class="col-lg-6 control-label">Coral Bonus RP Per-Level Threshold</label>
+                <label class="col-lg-6 control-label">Traversal TOWER Threshold</label>
                 <div class="col-lg-6">
-                  <input type="text" class="form-control" id="coralBonusPerLevelThreshold"
-                    name="coralBonusPerLevelThreshold" value="{{.CoralBonusPerLevelThreshold}}">
-                </div>
-              </div>
-              <div class="row mb-3">
-                <label class="col-lg-6 control-label">Barge Bonus RP Point Threshold</label>
-                <div class="col-lg-6">
-                  <input type="text" class="form-control" id="bargeBonusPointThreshold" name="bargeBonusPointThreshold"
-                    value="{{.BargeBonusPointThreshold}}">
-                </div>
-              </div>
-              <div class="row">
-                <label class="col-lg-6 control-label">Include Algae Points Towards Barge Bonus</label>
-                <div class="col-lg-1 checkbox">
-                  <input type="checkbox" id="includeAlgaeInBargeBonus"
-                    name="includeAlgaeInBargeBonus" {{if .IncludeAlgaeInBargeBonus}} checked{{end}}>
+                  <input type="text" class="form-control" id="traversalTowerThreshold"
+                    name="traversalTowerThreshold" value="{{.TraversalTowerThreshold}}">
                 </div>
               </div>
             </fieldset>

@@ -17,6 +17,7 @@ type Hub struct {
 	LastLEDToggle    time.Time      // Last time LED state was toggled
 	LEDCyclePeriod   time.Duration  // Period for LED cycling
 	DeactivationTime time.Time      // When the HUB will be deactivated (for warning flash)
+	ActivationTime   time.Time      // When the HUB was activated
 }
 
 // TowerLevel represents the climbing level a robot achieves on the TOWER.
@@ -39,20 +40,28 @@ func NewHub() *Hub {
 	}
 }
 
-// UpdateLEDState updates the LED state based on the configured cycle period.
-// If within 3 seconds of deactivation, flashes rapidly as a warning.
+// UpdateLEDState updates the LED state based on the hub status.
+// - Solid ON when hub is active and not near end of shift
+// - Flashing when within 3 seconds of deactivation
+// - OFF when hub is inactive
 func (hub *Hub) UpdateLEDState(currentTime time.Time) {
-	cycleFreq := hub.LEDCyclePeriod
-
-	// If within 3 seconds of deactivation, flash faster as a warning
-	if !hub.DeactivationTime.IsZero() &&
-	   currentTime.Add(3*time.Second).After(hub.DeactivationTime) {
-		cycleFreq = 500 * time.Millisecond // Rapid warning flash
+	// If hub is not active, LED is off
+	if !hub.IsActive {
+		hub.LEDState = false
+		return
 	}
 
-	if currentTime.Sub(hub.LastLEDToggle) >= cycleFreq {
-		hub.LEDState = !hub.LEDState
-		hub.LastLEDToggle = currentTime
+	// If within 3 seconds of deactivation, flash as a warning
+	if !hub.DeactivationTime.IsZero() &&
+	   currentTime.Add(3*time.Second).After(hub.DeactivationTime) {
+		cycleFreq := 500 * time.Millisecond // Rapid warning flash
+		if currentTime.Sub(hub.LastLEDToggle) >= cycleFreq {
+			hub.LEDState = !hub.LEDState
+			hub.LastLEDToggle = currentTime
+		}
+	} else {
+		// Otherwise, LED is solid ON
+		hub.LEDState = true
 	}
 }
 
@@ -64,6 +73,7 @@ func (hub *Hub) Deactivate() {
 // Activate turns on the HUB for FUEL scoring.
 func (hub *Hub) Activate() {
 	hub.IsActive = true
+	hub.ActivationTime = time.Now()
 }
 
 // ToggleLED manually toggles the LED state.
