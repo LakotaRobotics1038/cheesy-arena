@@ -631,7 +631,7 @@ func createTbaScoringBreakdown(
 		AutoLineRobot3:           leaveMapping[score.AutoStatuses[2]],
 		AutoFuel:                 score.Hub.AutoFuel,
 		TeleopFuel:               score.Hub.TeleopFuel,
-		FuelPoints:               scoreSummary.FuelPoints,
+		FuelPoints:               scoreSummary.NumFuel,
 		EndGameRobot1:            endGameStatusMapping[score.EndgameStatuses[0]],
 		EndGameRobot2:            endGameStatusMapping[score.EndgameStatuses[1]],
 		EndGameRobot3:            endGameStatusMapping[score.EndgameStatuses[2]],

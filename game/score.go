@@ -39,19 +39,19 @@ func (score *Score) Summarize(opponentScore *Score) *ScoreSummary {
 		return summary
 	}
 
-	// Calculate FUEL points (1 point per FUEL, only if HUB is active).
-	summary.FuelPoints = score.Hub.AutoFuelPoints() + score.Hub.TeleopFuelPoints()
-	summary.AutoFuelPoints = score.Hub.AutoFuelPoints()
-	summary.NumFuel = score.Hub.TotalFuel()
-
 	// Calculate AUTO Tower points.
 	for _, status := range score.AutoStatuses {
 		switch status {
 		case EndgameL1:
-			summary.TowerPoints += 15
+			summary.AutoTowerPoints += 15
 		default:
 		}
 	}
+
+	// Calculate FUEL points (1 point per FUEL, only if HUB is active).
+	summary.AutoFuelPoints = score.Hub.AutoFuelPoints()
+	summary.AutoPoints = summary.AutoTowerPoints + summary.AutoFuelPoints
+	summary.NumFuel = score.Hub.TotalFuel()
 
 	// Calculate endgame points.
 	for _, status := range score.EndgameStatuses {
@@ -67,7 +67,8 @@ func (score *Score) Summarize(opponentScore *Score) *ScoreSummary {
 	}
 
 	// Match points = FUEL points + TOWER points.
-	summary.MatchPoints = summary.FuelPoints + summary.TowerPoints
+	summary.TowerPoints += summary.AutoTowerPoints
+	summary.MatchPoints = summary.NumFuel + summary.TowerPoints
 
 	// Calculate penalty points.
 	if opponentScore != nil {

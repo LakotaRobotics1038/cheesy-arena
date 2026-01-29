@@ -14,7 +14,6 @@ func TestScoreSummary(t *testing.T) {
 
 	// Red summary - no fouls from opponent (TestScore2 has empty fouls)
 	redSummary := redScore.Summarize(blueScore)
-	assert.Equal(t, 13, redSummary.FuelPoints)      // 5 auto + 8 teleop
 	assert.Equal(t, 13, redSummary.NumFuel)
 	assert.Equal(t, 45, redSummary.TowerPoints)     // Level1 Auto (15) + Level2 Teleop (20)
 	assert.Equal(t, 58, redSummary.MatchPoints)     // 13 + 35
@@ -28,7 +27,6 @@ func TestScoreSummary(t *testing.T) {
 
 	// Blue summary - fouls from Red (TestScore1 has 7 fouls: 5 major (15pts) + 2 minor (5pts) = 75+10=85 points)
 	blueSummary := blueScore.Summarize(redScore)
-	assert.Equal(t, 12, blueSummary.FuelPoints)      // 2 auto + 10 teleop
 	assert.Equal(t, 12, blueSummary.NumFuel)
 	assert.Equal(t, 60, blueSummary.TowerPoints)     // Level3 Teleop (30)
 	assert.Equal(t, 72, blueSummary.MatchPoints)     // 12 + 30

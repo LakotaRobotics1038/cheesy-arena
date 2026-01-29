@@ -13,7 +13,6 @@ import (
 func TestAddScoreSummary(t *testing.T) {
 	rand.Seed(0)
 	redSummary := &ScoreSummary{
-		FuelPoints:               45,
 		NumFuel:                  45,
 		TowerPoints:              30,
 		MatchPoints:              75,
@@ -24,7 +23,6 @@ func TestAddScoreSummary(t *testing.T) {
 		BonusRankingPoints:       2,
 	}
 	blueSummary := &ScoreSummary{
-		FuelPoints:               20,
 		NumFuel:                  20,
 		TowerPoints:              40,
 		MatchPoints:              60,

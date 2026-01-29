@@ -55,7 +55,7 @@ func (fields *RankingFields) AddScoreSummary(ownScore *ScoreSummary, opponentSco
 
 	// Assign tiebreaker points.
 	fields.MatchPoints += ownScore.MatchPoints
-	fields.FuelPoints += ownScore.FuelPoints
+	fields.FuelPoints += ownScore.NumFuel
 	fields.TowerPoints += ownScore.TowerPoints
 }
 

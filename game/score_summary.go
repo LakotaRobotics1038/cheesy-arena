@@ -6,9 +6,10 @@
 package game
 
 type ScoreSummary struct {
-	FuelPoints             int
-	NumFuel                int
+	AutoTowerPoints        int
+	AutoPoints             int
 	AutoFuelPoints         int
+	NumFuel                int
 	TowerPoints            int
 	MatchPoints            int
 	FoulPoints             int
