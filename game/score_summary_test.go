@@ -9,11 +9,9 @@ import (
 )
 
 func TestDetermineMatchStatus(t *testing.T) {
-	redScoreSummary := &ScoreSummary{}
-	blueScoreSummary := &ScoreSummary{}
+	redScoreSummary := &ScoreSummary{Score: 10}
+	blueScoreSummary := &ScoreSummary{Score: 10}
 
-	redScoreSummary.Score = 10
-	blueScoreSummary.Score = 10
 	assert.Equal(t, TieMatch, DetermineMatchStatus(redScoreSummary, blueScoreSummary, false))
 
 	redScoreSummary.Score = 11
