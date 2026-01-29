@@ -113,9 +113,9 @@ type EventSettings struct {
 	PauseDurationSec                 int
 	TeleopDurationSec                int
 	WarningRemainingDurationSec      int
-	EnergizedFuelThreshold           int  // FUEL threshold for ENERGIZED RP
-	SuperchargedFuelThreshold        int  // FUEL threshold for SUPERCHARGED RP
-	TraversalTowerThreshold          int  // TOWER points threshold for TRAVERSAL RP
+	EnergizedFuelThreshold           int // FUEL threshold for ENERGIZED RP
+	SuperchargedFuelThreshold        int // FUEL threshold for SUPERCHARGED RP
+	TraversalTowerThreshold          int // TOWER points threshold for TRAVERSAL RP
 }
 
 func (database *Database) GetEventSettings() (*EventSettings, error) {

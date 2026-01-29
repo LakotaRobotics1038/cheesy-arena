@@ -37,6 +37,9 @@ func (client *FakeModbusClient) WriteMultipleCoils(address, quantity uint16, val
 	if address != 0 {
 		return nil, errors.New("unexpected address")
 	}
+	if client.returnError {
+		return nil, errors.New("dummy error")
+	}
 	bools := byteToBool(value, int(quantity))
 	for i, b := range bools {
 		client.coils[i] = b
@@ -51,6 +54,9 @@ func (client *FakeModbusClient) ReadInputRegisters(address, quantity uint16) (re
 func (client *FakeModbusClient) ReadHoldingRegisters(address, quantity uint16) (results []byte, err error) {
 	if address != 0 {
 		return nil, errors.New("unexpected address")
+	}
+	if client.returnError {
+		return nil, errors.New("dummy error")
 	}
 	registersToRead := client.registers[0:quantity]
 	bytes := make([]byte, len(registersToRead)*2)
@@ -68,6 +74,15 @@ func (client *FakeModbusClient) WriteSingleRegister(address, value uint16) (resu
 func (client *FakeModbusClient) WriteMultipleRegisters(
 	address, quantity uint16, value []byte,
 ) (results []byte, err error) {
+	if address != 0 {
+		return nil, errors.New("unexpected address")
+	}
+	if client.returnError {
+		return nil, errors.New("dummy error")
+	}
+	for i := uint16(0); i < quantity; i++ {
+		client.registers[i] = uint16(value[2*i])<<8 + uint16(value[2*i+1])
+	}
 	return nil, nil
 }
 

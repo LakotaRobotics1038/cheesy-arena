@@ -91,8 +91,6 @@ func TestPlcGetNames(t *testing.T) {
 		t,
 		[]string{
 			"fieldIoConnection",
-			"redHub",
-			"blueHub",
 		},
 		plc.GetRegisterNames(),
 	)
@@ -108,8 +106,6 @@ func TestPlcGetNames(t *testing.T) {
 			"stackLightBlue",
 			"stackLightBuzzer",
 			"fieldResetLight",
-			"redHubLight",
-			"blueHubLight",
 		},
 		plc.GetCoilNames(),
 	)
@@ -333,7 +329,6 @@ func TestPlcRegisters(t *testing.T) {
 		)
 	}
 }
-
 
 func TestPlcCoils(t *testing.T) {
 	var client FakeModbusClient

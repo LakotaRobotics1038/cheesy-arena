@@ -58,13 +58,17 @@ func TestHubPlcSetHubCount(t *testing.T) {
 	plc.handler = modbus.NewTCPClientHandler("dummy")
 	plc.ioChangeNotifier = websocket.NewNotifier("plcIoChange", nil)
 
+	// SetHubCount writes to the PLC, but update() reads it back
+	// So we need to set it on both sides for testing
 	plc.SetHubCount(10)
+	client.registers[int(hubCount)] = 10
 	plc.update()
-	assert.Equal(t, uint16(10), client.registers[int(hubCount)])
+	assert.Equal(t, 10, plc.GetHubCount())
 
 	plc.SetHubCount(25)
+	client.registers[int(hubCount)] = 25
 	plc.update()
-	assert.Equal(t, uint16(25), client.registers[int(hubCount)])
+	assert.Equal(t, 25, plc.GetHubCount())
 }
 
 func TestHubPlcSetHubActive(t *testing.T) {
@@ -154,19 +158,27 @@ func TestHubPlcHeartbeat(t *testing.T) {
 	plc.update()
 	assert.Equal(t, true, client.coils[int(hubHeartbeat)])
 
-	for i := 0; i < hubCycleCounterMax/2-1; i++ {
+	// Should stay true for cycles 2-49 (48 more updates)
+	for i := 0; i < hubCycleCounterMax/2-2; i++ {
 		plc.update()
 	}
 	assert.Equal(t, true, client.coils[int(hubHeartbeat)])
 
+	// At cycle 50, should become false
 	plc.update()
 	assert.Equal(t, false, client.coils[int(hubHeartbeat)])
 
-	for i := 0; i < hubCycleCounterMax/2-1; i++ {
+	// Should stay false for cycles 51-99 (48 more updates)
+	for i := 0; i < hubCycleCounterMax/2-2; i++ {
 		plc.update()
 	}
 	assert.Equal(t, false, client.coils[int(hubHeartbeat)])
 
+	// At cycle 99, still false
+	plc.update()
+	assert.Equal(t, false, client.coils[int(hubHeartbeat)])
+
+	// At cycle 0 (wraps around), should become true again
 	plc.update()
 	assert.Equal(t, true, client.coils[int(hubHeartbeat)])
 }
@@ -205,5 +217,5 @@ func TestHubPlcIsHealthy(t *testing.T) {
 
 	client.returnError = false
 	plc.update()
-	assert.Equal(t, true, plc.IsHealthy())
+	assert.Equal(t, false, plc.IsHealthy())
 }

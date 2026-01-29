@@ -7,12 +7,13 @@ package web
 
 import (
 	"fmt"
-	"github.com/Team254/cheesy-arena/game"
-	"github.com/Team254/cheesy-arena/model"
-	"github.com/Team254/cheesy-arena/websocket"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/Team254/cheesy-arena/game"
+	"github.com/Team254/cheesy-arena/model"
+	"github.com/Team254/cheesy-arena/websocket"
 )
 
 // Shows the Field Testing page.
@@ -26,7 +27,7 @@ func (web *Web) fieldTestingGetHandler(w http.ResponseWriter, r *http.Request) {
 		handleWebErr(w, err)
 		return
 	}
-	plc := web.arena.Plc
+	plc := web.arena.MainPlc
 	data := struct {
 		*model.EventSettings
 		MatchSounds   []*game.MatchSound
@@ -55,7 +56,9 @@ func (web *Web) fieldTestingWebsocketHandler(w http.ResponseWriter, r *http.Requ
 	defer ws.Close()
 
 	// Subscribe the websocket to the notifiers whose messages will be passed on to the client, in a separate goroutine.
-	go ws.HandleNotifiers(web.arena.Plc.IoChangeNotifier())
+	go ws.HandleNotifiers(web.arena.MainPlc.IoChangeNotifier())
+	go ws.HandleNotifiers(web.arena.RedHubPlc.IoChangeNotifier())
+	go ws.HandleNotifiers(web.arena.BlueHubPlc.IoChangeNotifier())
 
 	// Loop, waiting for commands and responding to them, until the client closes the connection.
 	for {

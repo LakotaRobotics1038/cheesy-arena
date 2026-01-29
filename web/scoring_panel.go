@@ -20,51 +20,51 @@ import (
 )
 
 type ScoringPosition struct {
-	Title            string
-	Alliance         string
-	NearSide         bool
-	ScoresAuto       bool
-	ScoresEndgame    bool
-	ScoresHub      bool
-	ScoresTower  bool
+	Title         string
+	Alliance      string
+	NearSide      bool
+	ScoresAuto    bool
+	ScoresEndgame bool
+	ScoresHub     bool
+	ScoresTower   bool
 }
 
 var positionParameters = map[string]ScoringPosition{
 	"red_near": {
-		Title:            "Red Near",
-		Alliance:         "red",
-		NearSide:         true,
-		ScoresAuto:       true,
-		ScoresEndgame:    true,
-		ScoresHub:      true,
-		ScoresTower:  false,
+		Title:         "Red Near",
+		Alliance:      "red",
+		NearSide:      true,
+		ScoresAuto:    true,
+		ScoresEndgame: true,
+		ScoresHub:     true,
+		ScoresTower:   false,
 	},
 	"red_far": {
-		Title:            "Red Far",
-		Alliance:         "red",
-		NearSide:         false,
-		ScoresAuto:       false,
-		ScoresEndgame:    false,
-		ScoresHub:      false,
-		ScoresTower:  true,
+		Title:         "Red Far",
+		Alliance:      "red",
+		NearSide:      false,
+		ScoresAuto:    false,
+		ScoresEndgame: false,
+		ScoresHub:     false,
+		ScoresTower:   true,
 	},
 	"blue_near": {
-		Title:            "Blue Near",
-		Alliance:         "blue",
-		NearSide:         true,
-		ScoresAuto:       false,
-		ScoresEndgame:    false,
-		ScoresHub:      false,
-		ScoresTower:  true,
+		Title:         "Blue Near",
+		Alliance:      "blue",
+		NearSide:      true,
+		ScoresAuto:    false,
+		ScoresEndgame: false,
+		ScoresHub:     false,
+		ScoresTower:   true,
 	},
 	"blue_far": {
-		Title:            "Blue Far",
-		Alliance:         "blue",
-		NearSide:         false,
-		ScoresAuto:       true,
-		ScoresEndgame:    true,
-		ScoresHub:      true,
-		ScoresTower:  false,
+		Title:         "Blue Far",
+		Alliance:      "blue",
+		NearSide:      false,
+		ScoresAuto:    true,
+		ScoresEndgame: true,
+		ScoresHub:     true,
+		ScoresTower:   false,
 	},
 }
 
@@ -88,10 +88,12 @@ func (web *Web) scoringPanelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := struct {
 		*model.EventSettings
-		PlcIsEnabled bool
-		PositionName string
-		Position     ScoringPosition
-	}{web.arena.EventSettings, web.arena.Plc.IsEnabled(), position, parameters}
+		PlcIsEnabled        bool
+		RedHubPlcIsEnabled  bool
+		BlueHubPlcIsEnabled bool
+		PositionName        string
+		Position            ScoringPosition
+	}{web.arena.EventSettings, web.arena.MainPlc.IsEnabled(), web.arena.RedHubPlc.IsEnabled(), web.arena.BlueHubPlc.IsEnabled(), position, parameters}
 	err = template.ExecuteTemplate(w, "base_no_navbar", data)
 	if err != nil {
 		handleWebErr(w, err)

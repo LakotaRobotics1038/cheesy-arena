@@ -252,9 +252,9 @@ func (plc *ModbusHubPlc) readRegisters() bool {
 		return false
 	}
 
-	for i := 0; i < int(hubRegisterCount); i++ {
-		plc.registers[i] = uint16(registers[2*i])<<8 + uint16(registers[2*i+1])
-	}
+	plc.registers[hubIoConnection] = uint16(registers[2*hubIoConnection])<<8 + uint16(registers[2*hubIoConnection+1])
+	plc.registers[hubCount] = uint16(registers[2*hubCount])<<8 + uint16(registers[2*hubCount+1])
+
 	return true
 }
 

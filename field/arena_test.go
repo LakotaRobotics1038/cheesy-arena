@@ -4,6 +4,12 @@
 package field
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/Team254/cheesy-arena/game"
 	"github.com/Team254/cheesy-arena/model"
 	"github.com/Team254/cheesy-arena/partner"
@@ -11,11 +17,6 @@ import (
 	"github.com/Team254/cheesy-arena/tournament"
 	"github.com/Team254/cheesy-arena/websocket"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestAssignTeam(t *testing.T) {
@@ -80,12 +81,12 @@ func TestArenaCheckCanStartMatch(t *testing.T) {
 	assert.Nil(t, arena.checkCanStartMatch())
 
 	// Check PLC constraints.
-	arena.mainPlc.SetAddress("1.2.3.4")
+	arena.MainPlc.SetAddress("1.2.3.4")
 	err = arena.checkCanStartMatch()
 	if assert.NotNil(t, err) {
 		assert.Contains(t, err.Error(), "cannot start match while PLC is not healthy")
 	}
-	arena.mainPlc.SetAddress("")
+	arena.MainPlc.SetAddress("")
 	assert.Nil(t, arena.checkCanStartMatch())
 }
 
@@ -689,7 +690,7 @@ func TestPlcEStopAStop(t *testing.T) {
 	arena := setupTestArena(t)
 	var plc FakePlc
 	plc.isEnabled = true
-	arena.mainPlc = &plc
+	arena.MainPlc = &plc
 
 	arena.Database.CreateTeam(&model.Team{Id: 254})
 	err := arena.assignTeam(254, "R1")
@@ -870,7 +871,7 @@ func TestPlcEStopAStopWithPlcDisabled(t *testing.T) {
 	arena := setupTestArena(t)
 	var plc FakePlc
 	plc.isEnabled = false
-	arena.mainPlc = &plc
+	arena.MainPlc = &plc
 
 	arena.Database.CreateTeam(&model.Team{Id: 254})
 	err := arena.assignTeam(254, "R1")
@@ -906,7 +907,7 @@ func TestPlcFieldEStop(t *testing.T) {
 	arena := setupTestArena(t)
 	var plc FakePlc
 	plc.isEnabled = true
-	arena.mainPlc = &plc
+	arena.MainPlc = &plc
 
 	arena.AllianceStations["R1"].Bypass = true
 	arena.AllianceStations["R2"].Bypass = true
@@ -930,7 +931,7 @@ func TestPlcFieldEStopWithPlcDisabled(t *testing.T) {
 	arena := setupTestArena(t)
 	var plc FakePlc
 	plc.isEnabled = false
-	arena.mainPlc = &plc
+	arena.MainPlc = &plc
 
 	arena.AllianceStations["R1"].Bypass = true
 	arena.AllianceStations["R2"].Bypass = true
@@ -954,7 +955,7 @@ func TestPlcMatchCycleEvergreen(t *testing.T) {
 	arena := setupTestArena(t)
 	var plc FakePlc
 	plc.isEnabled = true
-	arena.mainPlc = &plc
+	arena.MainPlc = &plc
 
 	arena.Update()
 	assert.Equal(t, [4]bool{true, true, false, false}, plc.stackLights)
@@ -1032,4 +1033,3 @@ func TestPlcMatchCycleEvergreen(t *testing.T) {
 	arena.Update()
 	assert.Equal(t, true, plc.fieldResetLight)
 }
-
