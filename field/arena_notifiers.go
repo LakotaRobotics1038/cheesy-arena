@@ -95,6 +95,8 @@ func (arena *Arena) generateArenaStatusMessage() any {
 		RedSCCStatus          string
 		BlueSCCStatus         string
 		PlcIsHealthy          bool
+		RedHubPlcIsHealthy    bool
+		BlueHubPlcIsHealthy   bool
 		FieldEStop            bool
 		PlcArmorBlockStatuses map[string]bool
 	}{
@@ -106,9 +108,11 @@ func (arena *Arena) generateArenaStatusMessage() any {
 		arena.networkSwitch.Status,
 		arena.redSCC.Status,
 		arena.blueSCC.Status,
-		arena.Plc.IsHealthy(),
-		arena.Plc.GetFieldEStop(),
-		arena.Plc.GetArmorBlockStatuses(),
+		arena.mainPlc.IsHealthy(),
+		arena.redHubPlc.IsHealthy(),
+		arena.blueHubPlc.IsHealthy(),
+		arena.mainPlc.GetFieldEStop(),
+		arena.mainPlc.GetArmorBlockStatuses(),
 	}
 }
 

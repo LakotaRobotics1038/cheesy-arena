@@ -16,14 +16,12 @@ func _() {
 	_ = x[stackLightBlue-5]
 	_ = x[stackLightBuzzer-6]
 	_ = x[fieldResetLight-7]
-	_ = x[redHubLight-8]
-	_ = x[blueHubLight-9]
-	_ = x[coilCount-10]
+	_ = x[coilCount-8]
 }
 
-const _coil_name = "heartbeatmatchResetstackLightGreenstackLightOrangestackLightRedstackLightBluestackLightBuzzerfieldResetLightredHubLightblueHubLightcoilCount"
+const _coil_name = "heartbeatmatchResetstackLightGreenstackLightOrangestackLightRedstackLightBluestackLightBuzzerfieldResetLightcoilCount"
 
-var _coil_index = [...]uint8{0, 9, 19, 34, 50, 63, 77, 93, 108, 119, 131, 140}
+var _coil_index = [...]uint8{0, 9, 19, 34, 50, 63, 77, 93, 108, 117}
 
 func (i coil) String() string {
 	idx := int(i) - 0

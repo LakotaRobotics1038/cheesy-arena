@@ -34,9 +34,6 @@ type Plc interface {
 	GetInputNames() []string
 	GetRegisterNames() []string
 	GetCoilNames() []string
-	GetHubCounts() (int, int)
-	SetHubLights(redActive, blueActive bool)
-	SetHubActive(alliance string, active bool)
 }
 
 type ModbusPlc struct {
@@ -53,8 +50,6 @@ type ModbusPlc struct {
 	oldCoils         [coilCount]bool
 	cycleCounter     int
 	matchResetCycles int
-	redHubActive     bool
-	blueHubActive    bool
 }
 
 const (
@@ -99,8 +94,6 @@ type register int
 
 const (
 	fieldIoConnection register = iota
-	redHub
-	blueHub
 	registerCount
 )
 
@@ -118,8 +111,6 @@ const (
 	stackLightBlue
 	stackLightBuzzer
 	fieldResetLight
-	redHubLight
-	blueHubLight
 	coilCount
 )
 
@@ -295,28 +286,6 @@ func (plc *ModbusPlc) GetCoilNames() []string {
 	return coilNames
 }
 
-// Returns the red and blue hub counts, respectively.
-func (plc *ModbusPlc) GetHubCounts() (int, int) {
-	return int(plc.registers[redHub]), int(plc.registers[blueHub])
-}
-
-// SetHubLights sets the state of the hub LED lights for both alliances.
-func (plc *ModbusPlc) SetHubLights(redActive, blueActive bool) {
-	plc.coils[redHubLight] = redActive
-	plc.coils[blueHubLight] = blueActive
-}
-
-// SetHubActive sets the active state for a hub and controls the LED light.
-func (plc *ModbusPlc) SetHubActive(alliance string, active bool) {
-	switch alliance {
-	case "red":
-		plc.redHubActive = active
-		plc.coils[redHubLight] = active
-	case "blue":
-		plc.blueHubActive = active
-		plc.coils[blueHubLight] = active
-	}
-}
 
 func (plc *ModbusPlc) connect() error {
 	address := fmt.Sprintf("%s:%d", plc.address, modbusPort)
