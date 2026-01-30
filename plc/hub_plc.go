@@ -45,13 +45,11 @@ type ModbusHubPlc struct {
 	oldCoils          [hubCoilCount]bool
 	hubActiveRegister bool
 	allianceName      string // "red" or "blue" for logging purposes
-	cycleCounter      int
 }
 
 const (
 	hubPlcLoopPeriodMs    = 100
 	hubPlcRetryIntevalSec = 3
-	hubCycleCounterMax    = 100
 )
 
 // Hub-specific registers
@@ -83,7 +81,6 @@ const (
 func NewHubPlc(allianceName string) *ModbusHubPlc {
 	plc := new(ModbusHubPlc)
 	plc.allianceName = allianceName
-	plc.ioChangeNotifier = websocket.NewNotifier("plcIoChange", nil)
 	return plc
 }
 
@@ -91,6 +88,12 @@ func (plc *ModbusHubPlc) SetAddress(address string) {
 	if address != plc.address {
 		plc.address = address
 		plc.resetConnection()
+	}
+
+	if plc.ioChangeNotifier == nil {
+		// Register a notifier that listeners can subscribe to to get websocket updates about I/O value changes.
+		notifierName := fmt.Sprintf("%sHubPlcIoChange", plc.allianceName)
+		plc.ioChangeNotifier = websocket.NewNotifier(notifierName, plc.generateIoChangeMessage)
 	}
 }
 
@@ -230,10 +233,6 @@ func (plc *ModbusHubPlc) resetConnection() {
 
 // Performs a single iteration of reading inputs from and writing outputs to the hub PLC.
 func (plc *ModbusHubPlc) update() {
-	// Update heartbeat
-	plc.cycleCounter = (plc.cycleCounter + 1) % hubCycleCounterMax
-	plc.coils[hubHeartbeat] = plc.cycleCounter < hubCycleCounterMax/2
-
 	plc.isHealthy = plc.readRegisters() && plc.writeRegisters() && plc.writeCoils()
 	if !plc.isHealthy {
 		plc.resetConnection()
@@ -282,6 +281,9 @@ func (plc *ModbusHubPlc) writeCoils() bool {
 		return false
 	}
 
+	// Send a heartbeat to the PLC so that it can disable outputs if the connection is lost.
+	plc.coils[hubHeartbeat] = true
+
 	coilBytes := make([]byte, (hubCoilCount+7)/8)
 	for i, coil := range plc.coils {
 		if coil {
@@ -315,4 +317,11 @@ func (plc *ModbusHubPlc) checkForChanges() {
 			break
 		}
 	}
+}
+
+func (plc *ModbusHubPlc) generateIoChangeMessage() any {
+	return &struct {
+		Registers []uint16
+		Coils     []bool
+	}{plc.registers[:], plc.coils[:]}
 }

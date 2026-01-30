@@ -30,11 +30,17 @@ func (web *Web) fieldTestingGetHandler(w http.ResponseWriter, r *http.Request) {
 	plc := web.arena.MainPlc
 	data := struct {
 		*model.EventSettings
-		MatchSounds   []*game.MatchSound
-		InputNames    []string
-		RegisterNames []string
-		CoilNames     []string
-	}{web.arena.EventSettings, game.MatchSounds, plc.GetInputNames(), plc.GetRegisterNames(), plc.GetCoilNames()}
+		MatchSounds          []*game.MatchSound
+		InputNames           []string
+		RegisterNames        []string
+		CoilNames            []string
+		RedHubRegisterNames  []string
+		RedHubCoilNames      []string
+		BlueHubRegisterNames []string
+		BlueHubCoilNames     []string
+	}{web.arena.EventSettings, game.MatchSounds, plc.GetInputNames(), plc.GetRegisterNames(), plc.GetCoilNames(),
+		web.arena.RedHubPlc.GetRegisterNames(), web.arena.RedHubPlc.GetCoilNames(),
+		web.arena.BlueHubPlc.GetRegisterNames(), web.arena.BlueHubPlc.GetCoilNames()}
 	err = template.ExecuteTemplate(w, "base", data)
 	if err != nil {
 		handleWebErr(w, err)

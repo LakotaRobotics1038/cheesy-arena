@@ -64,6 +64,68 @@ UI for testing the game sounds and the LEDs and PLC connected to the field.
         </div>
       </div>
     </div>
+    <div class="card card-body bg-body-tertiary mt-3">
+      <legend>Red Hub PLC</legend>
+      <div class="row">
+        <div class="col-lg-6">
+          <table class="table">
+            <tr>
+              <th class="bg-danger" colspan="2">Registers</th>
+            </tr>
+            {{range $i, $name := .RedHubRegisterNames}}
+            <tr>
+              <td class="bg-body-tertiary">{{$name}}</td>
+              <td class="bg-body-tertiary" id="redHubRegister{{$i}}"></td>
+            </tr>
+            {{end}}
+          </table>
+        </div>
+        <div class="col-lg-6">
+          <table class="table">
+            <tr>
+              <th class="bg-danger" colspan="2">Coils</th>
+            </tr>
+            {{range $i, $name := .RedHubCoilNames}}
+            <tr>
+              <td class="bg-body-tertiary">{{$name}}</td>
+              <td class="bg-body-tertiary" id="redHubCoil{{$i}}" data-plc-value="false"></td>
+            </tr>
+            {{end}}
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="card card-body bg-body-tertiary mt-3">
+      <legend>Blue Hub PLC</legend>
+      <div class="row">
+        <div class="col-lg-6">
+          <table class="table">
+            <tr>
+              <th class="bg-primary" colspan="2">Registers</th>
+            </tr>
+            {{range $i, $name := .BlueHubRegisterNames}}
+            <tr>
+              <td class="bg-body-tertiary">{{$name}}</td>
+              <td class="bg-body-tertiary" id="blueHubRegister{{$i}}"></td>
+            </tr>
+            {{end}}
+          </table>
+        </div>
+        <div class="col-lg-6">
+          <table class="table">
+            <tr>
+              <th class="bg-primary" colspan="2">Coils</th>
+            </tr>
+            {{range $i, $name := .BlueHubCoilNames}}
+            <tr>
+              <td class="bg-body-tertiary">{{$name}}</td>
+              <td class="bg-body-tertiary" id="blueHubCoil{{$i}}" data-plc-value="false"></td>
+            </tr>
+            {{end}}
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {{end}}

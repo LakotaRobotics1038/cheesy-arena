@@ -27,11 +27,41 @@ var handlePlcIoChange = function (data) {
   });
 };
 
+// Handles websocket messages for Red Hub PLC
+var handleRedHubPlcIoChange = function (data) {
+  $.each(data.Registers, function (index, register) {
+    $("#redHubRegister" + index).text(register)
+  });
+
+  $.each(data.Coils, function (index, coil) {
+    $("#redHubCoil" + index).text(coil)
+    $("#redHubCoil" + index).attr("data-plc-value", coil);
+  });
+};
+
+// Handles websocket messages for Blue Hub PLC
+var handleBlueHubPlcIoChange = function (data) {
+  $.each(data.Registers, function (index, register) {
+    $("#blueHubRegister" + index).text(register)
+  });
+
+  $.each(data.Coils, function (index, coil) {
+    $("#blueHubCoil" + index).text(coil)
+    $("#blueHubCoil" + index).attr("data-plc-value", coil);
+  });
+};
+
 $(function () {
   // Set up the websocket back to the server.
   websocket = new CheesyWebsocket("/setup/field_testing/websocket", {
     plcIoChange: function (event) {
       handlePlcIoChange(event.data);
+    },
+    redHubPlcIoChange: function (event) {
+      handleRedHubPlcIoChange(event.data);
+    },
+    blueHubPlcIoChange: function (event) {
+      handleBlueHubPlcIoChange(event.data);
     }
   });
 });
