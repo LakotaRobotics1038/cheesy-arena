@@ -43,7 +43,6 @@ type ModbusHubPlc struct {
 	coils             [hubCoilCount]bool
 	oldRegisters      [hubRegisterCount]uint16
 	oldCoils          [hubCoilCount]bool
-	hubActiveRegister bool
 	allianceName      string // "red" or "blue" for logging purposes
 }
 
@@ -62,7 +61,6 @@ const (
 	hubLightRed
 	hubLightGreen
 	hubLightBlue
-	hubActive
 	hubCount
 	hubRegisterCount
 )
@@ -74,6 +72,7 @@ type hubCoil int
 
 const (
 	hubHeartbeat hubCoil = iota
+	hubActive
 	hubCoilCount
 )
 
@@ -193,12 +192,7 @@ func (plc *ModbusHubPlc) SetHubLight(active bool) {
 
 // SetHubActive sets the active state for the hub and controls the LED light.
 func (plc *ModbusHubPlc) SetHubActive(active bool) {
-	plc.hubActiveRegister = active
-	if active {
-		plc.registers[hubActive] = 1
-	} else {
-		plc.registers[hubActive] = 0
-	}
+	plc.coils[hubActive] = active
 }
 
 func (plc *ModbusHubPlc) connect() error {
