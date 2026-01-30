@@ -139,6 +139,8 @@ func (database *Database) GetEventSettings() (*EventSettings, error) {
 		ApChannel:                   36,
 		SCCUpCommands:               strings.Join(sccDefaultUpCommands, "\n"),
 		SCCDownCommands:             strings.Join(sccDefaultDownCommands, "\n"),
+		RedHubPlcAddress:            "10.0.100.10",
+		BlueHubPlcAddress:           "10.0.100.11",
 		CompanionAddress:            "",
 		WarmupDurationSec:           game.MatchTiming.WarmupDurationSec,
 		AutoDurationSec:             game.MatchTiming.AutoDurationSec,
