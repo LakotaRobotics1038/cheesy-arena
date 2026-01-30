@@ -10,16 +10,16 @@ func _() {
 	var x [1]struct{}
 	_ = x[hubIoConnection-0]
 	_ = x[hubLightRed-1]
-	_ = x[hubLightBlue-2]
-	_ = x[hubLightGreen-3]
+	_ = x[hubLightGreen-2]
+	_ = x[hubLightBlue-3]
 	_ = x[hubActive-4]
 	_ = x[hubCount-5]
 	_ = x[hubRegisterCount-6]
 }
 
-const _hubRegister_name = "hubIoConnectionhubLightRedhubLightBluehubLightGreenhubActivehubCounthubRegisterCount"
+const _hubRegister_name = "hubIoConnectionhubLightRedhubLightGreenhubLightBluehubActivehubCounthubRegisterCount"
 
-var _hubRegister_index = [...]uint8{0, 15, 26, 38, 51, 60, 68, 84}
+var _hubRegister_index = [...]uint8{0, 15, 26, 39, 51, 60, 68, 84}
 
 func (i hubRegister) String() string {
 	idx := int(i) - 0

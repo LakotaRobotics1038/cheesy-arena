@@ -60,8 +60,8 @@ type hubRegister int
 const (
 	hubIoConnection hubRegister = iota
 	hubLightRed
-	hubLightBlue
 	hubLightGreen
+	hubLightBlue
 	hubActive
 	hubCount
 	hubRegisterCount
