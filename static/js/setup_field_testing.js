@@ -15,14 +15,14 @@ var setHubLightColor = function (alliance) {
   var red = parseInt($("#" + alliance + "HubRed").val());
   var green = parseInt($("#" + alliance + "HubGreen").val());
   var blue = parseInt($("#" + alliance + "HubBlue").val());
-  
+
   if (isNaN(red) || red < 0 || red > 255 ||
       isNaN(green) || green < 0 || green > 255 ||
       isNaN(blue) || blue < 0 || blue > 255) {
     alert("Please enter valid RGB values (0-255)");
     return;
   }
-  
+
   websocket.send("setHubLightColor", {
     alliance: alliance,
     red: red,
