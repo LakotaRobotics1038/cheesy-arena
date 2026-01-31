@@ -34,10 +34,13 @@ func TestHubStatusTransitionShift(t *testing.T) {
 	game.MatchTiming.PauseDurationSec = 3
 	game.MatchTiming.TeleopDurationSec = 140
 	game.MatchTiming.WarningRemainingDurationSec = 30
+	game.MatchTiming.TransitionDurationSec = 10
 
 	arena.MatchState = TeleopPeriod
-	// At 155 seconds (start of TRANSITION SHIFT: warmup 3 + auto 20 + 10)
-	arena.updateHubStatus(155)
+	// transitionShiftStart = warmup(3) + auto(20) + pause(3) = 26 seconds
+	// transitionShiftEnd = 26 + 10 = 36 seconds
+	// Test at matchTimeSec = 30 (in transition shift)
+	arena.updateHubStatus(30)
 
 	assert.True(t, arena.RedRealtimeScore.CurrentScore.Hub.IsActive)
 	assert.True(t, arena.BlueRealtimeScore.CurrentScore.Hub.IsActive)
@@ -52,6 +55,8 @@ func TestHubStatusAllianceShifts(t *testing.T) {
 	game.MatchTiming.PauseDurationSec = 2
 	game.MatchTiming.TeleopDurationSec = 140
 	game.MatchTiming.WarningRemainingDurationSec = 30
+	game.MatchTiming.TransitionDurationSec = 10
+	game.MatchTiming.AllianceShiftDurationSec = 25
 
 	// Set up AUTO scoring: Red wins with 10 fuel vs Blue's 5 fuel
 	arena.RedRealtimeScore.CurrentScore.Hub.AutoFuel = 10
@@ -62,54 +67,38 @@ func TestHubStatusAllianceShifts(t *testing.T) {
 	arena.autoWinningAlliance = "red"
 
 	// Total match time: warmup(3) + auto(20) + pause(2) + teleop(140) = 165 seconds
-	// transitionShiftStart = 3 + 20 + 10 = 33 seconds
-	// endGameStart = 165 - 30 = 135 seconds
+	// transitionShiftStart = 3 + 20 + 2 = 25 seconds (start of teleop)
+	// transitionShiftEnd = 25 + 10 = 35 seconds
+	// endGameStart = 3 + 20 + 2 + 140 - 30 = 135 seconds
 
-	// TRANSITION SHIFT ends at 33 seconds, so when matchTimeSec = 165 - 33 = 132
-	// SHIFT 1 runs from 33-58 seconds (25 seconds), matchTimeSec = 132-107
-	// SHIFT 2 runs from 58-83 seconds (25 seconds), matchTimeSec = 107-82
-	// SHIFT 3 runs from 83-108 seconds (25 seconds), matchTimeSec = 82-57
-	// SHIFT 4 runs from 108-133 seconds (25 seconds), matchTimeSec = 57-32
-	// END GAME starts at 135 seconds from start... wait that's before shifts end
+	// matchTimeSec now counts UP from 0
+	// SHIFT 1: matchTimeSec 35-60 (25 seconds), shiftNumber = 0
+	// SHIFT 2: matchTimeSec 60-85 (25 seconds), shiftNumber = 1
+	// SHIFT 3: matchTimeSec 85-110 (25 seconds), shiftNumber = 2
+	// SHIFT 4: matchTimeSec 110-135 (25 seconds), shiftNumber = 3
+	// END GAME: matchTimeSec 135+
 
-	// Let me recalculate endGameStart:
-	// endGameStart = warmup(3) + auto(20) + pause(2) + teleop(140) - warning(30)
-	// endGameStart = 165 - 30 = 135 seconds
-	// But transition shift is at 33, so endgame is AFTER all shifts
-	// Actually the formulation is wrong. endGameStart should be when warning period starts
-	// which is: total_time - warning_time = 135 seconds after warmup+auto+pause starts
-	// NO: endGameStart = warmup+auto+pause + teleop - warning = 3+20+2+140-30 = 135
-	// But teleop = 140 and only lasts 140 seconds, so warning starts at 140-30 = 110 seconds into teleop
-	// which is 3+20+2+110 = 135 seconds into match
-
-	// So END GAME (warning period) starts at 135 seconds
-	// SHIFT 1: elapsedTime 33-58, matchTimeSec 132-107
-	// SHIFT 2: elapsedTime 58-83, matchTimeSec 107-82
-	// SHIFT 3: elapsedTime 83-108, matchTimeSec 82-57
-	// SHIFT 4: elapsedTime 108-133, matchTimeSec 57-32
-	// END GAME: elapsedTime 135+, matchTimeSec 30-
-
-	// SHIFT 1: secIntoShifts = elapsedTime - 33, shiftNumber = 0
+	// SHIFT 1: shiftNumber = 0
 	// For RED winning: redActive = (0 % 2 == 1) = false -> Red INACTIVE, Blue ACTIVE ✓
-	arena.updateHubStatus(130) // elapsedTime ≈ 35
+	arena.updateHubStatus(40) // matchTimeSec = 40, in SHIFT 1
 	assert.False(t, arena.RedRealtimeScore.CurrentScore.Hub.IsActive, "Red should be inactive in SHIFT 1 (shift 0)")
 	assert.True(t, arena.BlueRealtimeScore.CurrentScore.Hub.IsActive, "Blue should be active in SHIFT 1 (shift 0)")
 
-	// SHIFT 2: secIntoShifts = 58 - 33 = 25, shiftNumber = 1
+	// SHIFT 2: shiftNumber = 1
 	// For RED winning: redActive = (1 % 2 == 1) = true -> Red ACTIVE, Blue INACTIVE ✓
-	arena.updateHubStatus(105) // elapsedTime ≈ 60
+	arena.updateHubStatus(65) // matchTimeSec = 65, in SHIFT 2
 	assert.True(t, arena.RedRealtimeScore.CurrentScore.Hub.IsActive, "Red should be active in SHIFT 2 (shift 1)")
 	assert.False(t, arena.BlueRealtimeScore.CurrentScore.Hub.IsActive, "Blue should be inactive in SHIFT 2 (shift 1)")
 
-	// SHIFT 3: secIntoShifts = 83 - 33 = 50, shiftNumber = 2
+	// SHIFT 3: shiftNumber = 2
 	// For RED winning: redActive = (2 % 2 == 1) = false -> Red INACTIVE, Blue ACTIVE ✓
-	arena.updateHubStatus(80) // elapsedTime ≈ 85
+	arena.updateHubStatus(90) // matchTimeSec = 90, in SHIFT 3
 	assert.False(t, arena.RedRealtimeScore.CurrentScore.Hub.IsActive, "Red should be inactive in SHIFT 3 (shift 2)")
 	assert.True(t, arena.BlueRealtimeScore.CurrentScore.Hub.IsActive, "Blue should be active in SHIFT 3 (shift 2)")
 
-	// SHIFT 4: secIntoShifts = 108 - 33 = 75, shiftNumber = 3
+	// SHIFT 4: shiftNumber = 3
 	// For RED winning: redActive = (3 % 2 == 1) = true -> Red ACTIVE, Blue INACTIVE ✓
-	arena.updateHubStatus(55) // elapsedTime ≈ 110
+	arena.updateHubStatus(115) // matchTimeSec = 115, in SHIFT 4
 	assert.True(t, arena.RedRealtimeScore.CurrentScore.Hub.IsActive, "Red should be active in SHIFT 4 (shift 3)")
 	assert.False(t, arena.BlueRealtimeScore.CurrentScore.Hub.IsActive, "Blue should be inactive in SHIFT 4 (shift 3)")
 }
@@ -129,8 +118,9 @@ func TestHubStatusEndGame(t *testing.T) {
 	arena.autoWinningAlliance = "red"
 
 	// During END GAME (last 30 seconds), both hubs should be active
-	// Total: 165 seconds, EndGame starts at 30 second countdown (165 - 30 = 135)
-	arena.updateHubStatus(25)
+	// Total: 165 seconds, EndGame starts at 135 seconds from start (warmup+auto+pause+teleop-warning)
+	// matchTimeSec = 140 (in end game period)
+	arena.updateHubStatus(140)
 
 	assert.True(t, arena.RedRealtimeScore.CurrentScore.Hub.IsActive, "Red should be active in END GAME")
 	assert.True(t, arena.BlueRealtimeScore.CurrentScore.Hub.IsActive, "Blue should be active in END GAME")
@@ -154,7 +144,8 @@ func TestHubStatusAutoWinnerDetermined(t *testing.T) {
 
 	// First call should determine winner
 	assert.False(t, arena.autoWinnerDetermined)
-	arena.updateHubStatus(150)
+	// Call with matchTimeSec in transition shift (e.g., 27 seconds from start)
+	arena.updateHubStatus(27)
 	assert.True(t, arena.autoWinnerDetermined)
 	assert.Equal(t, "blue", arena.autoWinningAlliance)
 }
@@ -175,7 +166,9 @@ func TestHubStatusTiedAutoFuel(t *testing.T) {
 
 	arena.MatchState = TeleopPeriod
 
-	// Should default to red when tied
-	arena.updateHubStatus(150)
-	assert.Equal(t, "red", arena.autoWinningAlliance)
+	// Should randomly select red or blue when tied
+	// Call with matchTimeSec in transition shift
+	arena.updateHubStatus(27)
+	// Just verify one was selected (can't test randomness reliably)
+	assert.True(t, arena.autoWinningAlliance == "red" || arena.autoWinningAlliance == "blue")
 }

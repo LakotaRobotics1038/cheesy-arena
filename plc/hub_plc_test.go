@@ -14,10 +14,13 @@ import (
 func TestHubPlcInitialization(t *testing.T) {
 	plc := NewHubPlc("red")
 	assert.Equal(t, "red", plc.allianceName)
-	assert.NotNil(t, plc.ioChangeNotifier)
 	assert.Equal(t, "", plc.address)
 	assert.Equal(t, false, plc.IsEnabled())
 	assert.Equal(t, false, plc.IsHealthy())
+
+	// ioChangeNotifier is initialized when SetAddress is called
+	plc.SetAddress("10.0.100.50")
+	assert.NotNil(t, plc.ioChangeNotifier)
 }
 
 func TestHubPlcSetAddress(t *testing.T) {
@@ -81,15 +84,15 @@ func TestHubPlcSetHubActive(t *testing.T) {
 
 	plc.SetHubActive(false)
 	plc.update()
-	assert.Equal(t, uint16(0), client.registers[int(hubActive)])
+	assert.Equal(t, false, client.coils[int(hubActive)])
 
 	plc.SetHubActive(true)
 	plc.update()
-	assert.Equal(t, uint16(1), client.registers[int(hubActive)])
+	assert.Equal(t, true, client.coils[int(hubActive)])
 
 	plc.SetHubActive(false)
 	plc.update()
-	assert.Equal(t, uint16(0), client.registers[int(hubActive)])
+	assert.Equal(t, false, client.coils[int(hubActive)])
 }
 
 func TestHubPlcSetHubLightRed(t *testing.T) {
@@ -158,27 +161,10 @@ func TestHubPlcHeartbeat(t *testing.T) {
 	plc.update()
 	assert.Equal(t, true, client.coils[int(hubHeartbeat)])
 
-	// Should stay true for cycles 2-49 (48 more updates)
-	for i := 0; i < hubCycleCounterMax/2-2; i++ {
-		plc.update()
-	}
+	// Hub PLC heartbeat is always true after first update (doesn't cycle like main PLC)
+	plc.update()
 	assert.Equal(t, true, client.coils[int(hubHeartbeat)])
 
-	// At cycle 50, should become false
-	plc.update()
-	assert.Equal(t, false, client.coils[int(hubHeartbeat)])
-
-	// Should stay false for cycles 51-99 (48 more updates)
-	for i := 0; i < hubCycleCounterMax/2-2; i++ {
-		plc.update()
-	}
-	assert.Equal(t, false, client.coils[int(hubHeartbeat)])
-
-	// At cycle 99, still false
-	plc.update()
-	assert.Equal(t, false, client.coils[int(hubHeartbeat)])
-
-	// At cycle 0 (wraps around), should become true again
 	plc.update()
 	assert.Equal(t, true, client.coils[int(hubHeartbeat)])
 }
@@ -193,7 +179,7 @@ func TestHubPlcGetNames(t *testing.T) {
 	assert.Equal(t, int(hubRegisterCount), len(registerNames))
 	assert.Equal(t, "hubIoConnection", registerNames[0])
 	assert.Equal(t, "hubLightRed", registerNames[1])
-	assert.Equal(t, "hubCount", registerNames[5])
+	assert.Equal(t, "hubCount", registerNames[4])
 
 	coilNames := plc.GetCoilNames()
 	assert.Equal(t, int(hubCoilCount), len(coilNames))
