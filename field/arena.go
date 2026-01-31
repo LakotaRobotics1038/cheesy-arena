@@ -785,7 +785,11 @@ func (arena *Arena) Update() {
 
 	// Handle hub lights on PLC (including 3-second deactivation delay)
 	arena.updateHubLights()
-	if arena.MatchState == AutoPeriod || arena.MatchState == TeleopPeriod {
+	if arena.FieldReset {
+		// Turn hub lights green when field reset is active
+		arena.RedHubPlc.SetHubLightColor(0, 255, 0)
+		arena.BlueHubPlc.SetHubLightColor(0, 255, 0)
+	} else if arena.MatchState == AutoPeriod || arena.MatchState == TeleopPeriod {
 		arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
 		arena.BlueHubPlc.SetHubLight(arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
 	} else if arena.MatchState == PausePeriod {

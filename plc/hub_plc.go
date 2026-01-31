@@ -26,6 +26,7 @@ type HubPlc interface {
 	GetHubCount() int
 	SetHubCount(count int)
 	SetHubLight(active bool)
+	SetHubLightColor(red, green, blue uint16)
 	SetHubActive(active bool)
 	GetInputNames() []string
 	GetRegisterNames() []string
@@ -188,6 +189,13 @@ func (plc *ModbusHubPlc) SetHubLight(active bool) {
 		plc.registers[hubLightGreen] = 0
 		plc.registers[hubLightBlue] = 0
 	}
+}
+
+// SetHubLightColor sets the hub LED light to a specific RGB color.
+func (plc *ModbusHubPlc) SetHubLightColor(red, green, blue uint16) {
+	plc.registers[hubLightRed] = red
+	plc.registers[hubLightGreen] = green
+	plc.registers[hubLightBlue] = blue
 }
 
 // SetHubActive sets the active state for the hub and controls the LED light.
