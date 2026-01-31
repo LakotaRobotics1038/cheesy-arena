@@ -785,9 +785,13 @@ func (arena *Arena) Update() {
 
 	// Handle hub lights on PLC (including 3-second deactivation delay)
 	arena.updateHubLights()
-	if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod || arena.MatchState == TeleopPeriod {
+	if arena.MatchState == AutoPeriod || arena.MatchState == TeleopPeriod {
 		arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
 		arena.BlueHubPlc.SetHubLight(arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
+	} else if arena.MatchState == PausePeriod {
+		// Turn off lights during pause period
+		arena.RedHubPlc.SetHubLight(false)
+		arena.BlueHubPlc.SetHubLight(false)
 	}
 
 	// Handle the team number / timer displays.
@@ -805,9 +809,11 @@ func (arena *Arena) Update() {
 // - END GAME: Both hubs active
 func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 	// Calculate timing boundaries (all in absolute seconds from match start)
+	// Transition shift starts at beginning of teleop and lasts TransitionDurationSec
 	transitionShiftStart := float64(
-		game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec + 10,
+		game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec + game.MatchTiming.PauseDurationSec,
 	)
+	transitionShiftEnd := transitionShiftStart + float64(game.MatchTiming.TransitionDurationSec)
 
 	endGameStart := float64(
 		game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec +
@@ -838,30 +844,23 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 	}
 
 	// Update hub status based on current match phase
-	// Note: matchTimeSec is a countdown timer (higher values = earlier in match)
-	// totalMatchTime = warmup + auto + pause + teleop
-	totalMatchTime := float64(
-		game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec +
-			game.MatchTiming.PauseDurationSec + game.MatchTiming.TeleopDurationSec,
-	)
-	elapsedTime := totalMatchTime - matchTimeSec
-
+	// matchTimeSec counts up from 0 at match start
 	if arena.MatchState == PreMatch || arena.MatchState == StartMatch || arena.MatchState == WarmupPeriod ||
 		arena.MatchState == AutoPeriod {
 		// AUTO: both hubs active
 		arena.setHubActive("red", true, false)
 		arena.setHubActive("blue", true, false)
-	} else if arena.MatchState == TeleopPeriod && elapsedTime < transitionShiftStart {
-		// TRANSITION SHIFT: both hubs active
+	} else if arena.MatchState == TeleopPeriod && matchTimeSec < transitionShiftEnd {
+		// TRANSITION SHIFT (first 10 seconds of teleop): both hubs active
 		arena.setHubActive("red", true, false)
 		arena.setHubActive("blue", true, false)
-	} else if arena.MatchState == TeleopPeriod && elapsedTime >= transitionShiftStart && elapsedTime < endGameStart-2 {
+	} else if arena.MatchState == TeleopPeriod && matchTimeSec >= transitionShiftEnd && matchTimeSec < endGameStart {
 		// ALLIANCE SHIFTS: alternate based on AUTO winner
 		// Calculate which shift we're in (0-3 for shifts 1-4)
 		// Each shift is 25 seconds
-		secIntoShifts := int(elapsedTime - transitionShiftStart)
-		shiftNumber := (secIntoShifts / 25) % 4
-		secIntoCurrentShift := secIntoShifts % 25
+		secIntoShifts := int(matchTimeSec - transitionShiftEnd)
+		shiftNumber := (secIntoShifts / game.MatchTiming.AllianceShiftDurationSec) % 4
+		secIntoCurrentShift := secIntoShifts % game.MatchTiming.AllianceShiftDurationSec
 
 		// Determine if hub should be active based on shift number and winner
 		var redActive, blueActive bool
@@ -874,22 +873,25 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 		}
 
 		// Set deactivation time to 3 seconds before end of shift for LED warning
-		// At 22 seconds into the shift, set deactivation time to 1 second from now (so flash starts)
-		if secIntoCurrentShift == 22 {
+		// At 22 seconds into the shift, set deactivation time to 3 seconds from now (at end of shift)
+		if secIntoCurrentShift == game.MatchTiming.AllianceShiftDurationSec-3 {
 			if redActive {
-				arena.RedRealtimeScore.CurrentScore.Hub.SetDeactivationTime(time.Now().Add(1 * time.Second))
+				arena.RedRealtimeScore.CurrentScore.Hub.SetDeactivationTime(time.Now().Add(3 * time.Second))
 			} else {
-				arena.BlueRealtimeScore.CurrentScore.Hub.SetDeactivationTime(time.Now().Add(1 * time.Second))
+				arena.BlueRealtimeScore.CurrentScore.Hub.SetDeactivationTime(time.Now().Add(3 * time.Second))
 			}
 		}
 
 		// Activate/deactivate hubs based on shift
 		arena.setHubActive("red", redActive, false)
 		arena.setHubActive("blue", blueActive, false)
-	} else if arena.MatchState == TeleopPeriod && elapsedTime >= endGameStart {
+	} else if arena.MatchState == TeleopPeriod && matchTimeSec >= endGameStart {
 		// END GAME: both hubs active
 		arena.setHubActive("red", true, false)
 		arena.setHubActive("blue", true, false)
+		// Clear any pending deactivation times for end game
+		arena.RedRealtimeScore.CurrentScore.Hub.SetDeactivationTime(time.Time{})
+		arena.BlueRealtimeScore.CurrentScore.Hub.SetDeactivationTime(time.Time{})
 	}
 }
 
@@ -1379,27 +1381,4 @@ func (arena *Arena) positionPostMatchScoreReady(position string) bool {
 func (arena *Arena) runPeriodicTasks() {
 	arena.updateEarlyLateMessage()
 	arena.purgeDisconnectedDisplays()
-}
-
-// trussLightWarningSequence generates the sequence of truss light states during the "sonar ping" warning sound. It
-// returns true if the sequence is active, and an array of booleans indicating the state of each truss light.
-func trussLightWarningSequence(matchTimeSec float64) (bool, [3]bool) {
-	stepTimeSec := 0.2
-	sequence := []int{1, 2, 3, 2, 1, 2, 3, 0, 0, 1, 2, 3, 2, 1, 2, 3, 0, 0}
-	startTime := float64(
-		game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec + game.MatchTiming.PauseDurationSec +
-			game.MatchTiming.TeleopDurationSec - game.MatchTiming.WarningRemainingDurationSec,
-	)
-	lights := [3]bool{false, false, false}
-
-	if matchTimeSec < startTime {
-		// The sequence is not active yet.
-		return false, lights
-	}
-
-	step := int((matchTimeSec - startTime) / stepTimeSec)
-	if step < len(sequence) && sequence[step] > 0 {
-		lights[sequence[step]-1] = true
-	}
-	return step < len(sequence), lights
 }

@@ -8,14 +8,14 @@ package game
 import "time"
 
 type Hub struct {
-	AutoFuel         int        // FUEL scored during AUTO period
-	TeleopFuel       int        // FUEL scored during TELEOP period
-	IsActive         bool           // Whether the HUB is active for FUEL scoring
-	LEDState         bool           // Current LED state
-	LastLEDToggle    time.Time      // Last time LED state was toggled
-	LEDCyclePeriod   time.Duration  // Period for LED cycling
-	DeactivationTime time.Time      // When the HUB will be deactivated (for warning flash)
-	ActivationTime   time.Time      // When the HUB was activated
+	AutoFuel         int           // FUEL scored during AUTO period
+	TeleopFuel       int           // FUEL scored during TELEOP period
+	IsActive         bool          // Whether the HUB is active for FUEL scoring
+	LEDState         bool          // Current LED state
+	LastLEDToggle    time.Time     // Last time LED state was toggled
+	LEDCyclePeriod   time.Duration // Period for LED cycling
+	DeactivationTime time.Time     // When the HUB will be deactivated (for warning flash)
+	ActivationTime   time.Time     // When the HUB was activated
 }
 
 // NewHub creates a new Hub with default LED cycling period.
@@ -41,7 +41,8 @@ func (hub *Hub) UpdateLEDState(currentTime time.Time) {
 
 	// If within 3 seconds of deactivation, flash as a warning
 	if !hub.DeactivationTime.IsZero() &&
-	   currentTime.Add(3*time.Second).After(hub.DeactivationTime) {
+		currentTime.Before(hub.DeactivationTime) &&
+		hub.DeactivationTime.Sub(currentTime) <= 3*time.Second {
 		cycleFreq := 500 * time.Millisecond // Rapid warning flash
 		if currentTime.Sub(hub.LastLEDToggle) >= cycleFreq {
 			hub.LEDState = !hub.LEDState
@@ -62,6 +63,8 @@ func (hub *Hub) Deactivate() {
 func (hub *Hub) Activate() {
 	hub.IsActive = true
 	hub.ActivationTime = time.Now()
+	// Clear deactivation time when activating
+	hub.DeactivationTime = time.Time{}
 }
 
 // ToggleLED manually toggles the LED state.

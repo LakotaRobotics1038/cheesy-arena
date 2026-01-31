@@ -28,10 +28,10 @@ func TestHubStatusTransitionShift(t *testing.T) {
 	arena.LoadTestMatch()
 
 	// During TRANSITION SHIFT (2:20-2:10), both hubs should be active
-	// Match timing: Warmup=3, Auto=20, Pause=2, Teleop=140, Warning=30
+	// Match timing: Warmup=3, Auto=20, Pause=3, Teleop=140, Warning=30
 	game.MatchTiming.WarmupDurationSec = 3
 	game.MatchTiming.AutoDurationSec = 20
-	game.MatchTiming.PauseDurationSec = 2
+	game.MatchTiming.PauseDurationSec = 3
 	game.MatchTiming.TeleopDurationSec = 140
 	game.MatchTiming.WarningRemainingDurationSec = 30
 
