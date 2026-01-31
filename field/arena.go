@@ -106,6 +106,7 @@ type Arena struct {
 	lastHubStatusChangeTime           time.Time // Track when hubs last changed status for grace period
 	redHubDeactivateAt                time.Time // When to deactivate red hub on PLC (3 seconds after hub object deactivation)
 	blueHubDeactivateAt               time.Time // When to deactivate blue hub on PLC (3 seconds after hub object deactivation)
+	currentAllianceShift              int       // Current alliance shift number (0-3) for tracking transitions
 }
 
 type AllianceStation struct {
@@ -556,7 +557,7 @@ func (arena *Arena) AbortMatch() error {
 	}
 
 	if arena.MatchState != WarmupPeriod {
-		arena.PlaySound("abort")
+		arena.PlaySound("foghorn")
 	}
 	arena.MatchState = PostMatch
 	arena.matchAborted = true
@@ -856,6 +857,7 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 		arena.setHubActive("blue", true, false)
 	} else if arena.MatchState == TeleopPeriod && matchTimeSec < transitionShiftEnd {
 		// TRANSITION SHIFT (first 10 seconds of teleop): both hubs active
+		arena.currentAllianceShift = -1 // Reset for alliance shifts
 		arena.setHubActive("red", true, false)
 		arena.setHubActive("blue", true, false)
 	} else if arena.MatchState == TeleopPeriod && matchTimeSec >= transitionShiftEnd && matchTimeSec < endGameStart {
@@ -865,6 +867,12 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 		secIntoShifts := int(matchTimeSec - transitionShiftEnd)
 		shiftNumber := (secIntoShifts / game.MatchTiming.AllianceShiftDurationSec) % 4
 		secIntoCurrentShift := secIntoShifts % game.MatchTiming.AllianceShiftDurationSec
+
+		// Detect shift transition and play levelup sound
+		if shiftNumber != arena.currentAllianceShift {
+			arena.currentAllianceShift = shiftNumber
+			arena.PlaySound("levelup")
+		}
 
 		// Determine if hub should be active based on shift number and winner
 		var redActive, blueActive bool
@@ -891,6 +899,7 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 		arena.setHubActive("blue", blueActive, false)
 	} else if arena.MatchState == TeleopPeriod && matchTimeSec >= endGameStart {
 		// END GAME: both hubs active
+		arena.currentAllianceShift = -1 // Reset shift tracking
 		arena.setHubActive("red", true, false)
 		arena.setHubActive("blue", true, false)
 		// Clear any pending deactivation times for end game
