@@ -86,6 +86,64 @@ func (web *Web) fieldTestingWebsocketHandler(w http.ResponseWriter, r *http.Requ
 				continue
 			}
 			web.arena.PlaySoundNotifier.NotifyWithMessage(sound)
+		case "setHubLightColor":
+			params, ok := data.(map[string]interface{})
+			if !ok {
+				ws.WriteError(fmt.Sprintf("Failed to parse '%s' message.", messageType))
+				continue
+			}
+			alliance, ok := params["alliance"].(string)
+			if !ok {
+				ws.WriteError("Invalid alliance parameter.")
+				continue
+			}
+			red, ok := params["red"].(float64)
+			if !ok {
+				ws.WriteError("Invalid red parameter.")
+				continue
+			}
+			green, ok := params["green"].(float64)
+			if !ok {
+				ws.WriteError("Invalid green parameter.")
+				continue
+			}
+			blue, ok := params["blue"].(float64)
+			if !ok {
+				ws.WriteError("Invalid blue parameter.")
+				continue
+			}
+			if alliance == "red" {
+				web.arena.RedHubPlc.SetHubLightColor(uint16(red), uint16(green), uint16(blue))
+			} else if alliance == "blue" {
+				web.arena.BlueHubPlc.SetHubLightColor(uint16(red), uint16(green), uint16(blue))
+			} else {
+				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
+				continue
+			}
+		case "setHubActive":
+			params, ok := data.(map[string]interface{})
+			if !ok {
+				ws.WriteError(fmt.Sprintf("Failed to parse '%s' message.", messageType))
+				continue
+			}
+			alliance, ok := params["alliance"].(string)
+			if !ok {
+				ws.WriteError("Invalid alliance parameter.")
+				continue
+			}
+			active, ok := params["active"].(bool)
+			if !ok {
+				ws.WriteError("Invalid active parameter.")
+				continue
+			}
+			if alliance == "red" {
+				web.arena.RedHubPlc.SetHubActive(active)
+			} else if alliance == "blue" {
+				web.arena.BlueHubPlc.SetHubActive(active)
+			} else {
+				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
+				continue
+			}
 		default:
 			ws.WriteError(fmt.Sprintf("Invalid message type '%s'.", messageType))
 			continue

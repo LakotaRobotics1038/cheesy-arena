@@ -10,6 +10,35 @@ var playSound = function (sound) {
   websocket.send("playSound", sound);
 };
 
+// Sends a websocket message to set the hub light color.
+var setHubLightColor = function (alliance) {
+  var red = parseInt($("#" + alliance + "HubRed").val());
+  var green = parseInt($("#" + alliance + "HubGreen").val());
+  var blue = parseInt($("#" + alliance + "HubBlue").val());
+  
+  if (isNaN(red) || red < 0 || red > 255 ||
+      isNaN(green) || green < 0 || green > 255 ||
+      isNaN(blue) || blue < 0 || blue > 255) {
+    alert("Please enter valid RGB values (0-255)");
+    return;
+  }
+  
+  websocket.send("setHubLightColor", {
+    alliance: alliance,
+    red: red,
+    green: green,
+    blue: blue
+  });
+};
+
+// Sends a websocket message to set the hub active status.
+var setHubActive = function (alliance, active) {
+  websocket.send("setHubActive", {
+    alliance: alliance,
+    active: active
+  });
+};
+
 // Handles a websocket message to update the PLC IO status.
 var handlePlcIoChange = function (data) {
   $.each(data.Inputs, function (index, input) {
