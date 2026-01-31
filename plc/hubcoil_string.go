@@ -9,12 +9,13 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[hubHeartbeat-0]
-	_ = x[hubCoilCount-1]
+	_ = x[hubActive-1]
+	_ = x[hubCoilCount-2]
 }
 
-const _hubCoil_name = "hubHeartbeathubCoilCount"
+const _hubCoil_name = "hubHeartbeathubActivehubCoilCount"
 
-var _hubCoil_index = [...]uint8{0, 12, 24}
+var _hubCoil_index = [...]uint8{0, 12, 21, 33}
 
 func (i hubCoil) String() string {
 	idx := int(i) - 0
