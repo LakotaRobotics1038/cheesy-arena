@@ -34,16 +34,16 @@ type HubPlc interface {
 
 // ModbusHubPlc implements the HubPlc interface for a single hub.
 type ModbusHubPlc struct {
-	address           string
-	handler           *modbus.TCPClientHandler
-	client            modbus.Client
-	isHealthy         bool
-	ioChangeNotifier  *websocket.Notifier
-	registers         [hubRegisterCount]uint16
-	coils             [hubCoilCount]bool
-	oldRegisters      [hubRegisterCount]uint16
-	oldCoils          [hubCoilCount]bool
-	allianceName      string // "red" or "blue" for logging purposes
+	address          string
+	handler          *modbus.TCPClientHandler
+	client           modbus.Client
+	isHealthy        bool
+	ioChangeNotifier *websocket.Notifier
+	registers        [hubRegisterCount]uint16
+	coils            [hubCoilCount]bool
+	oldRegisters     [hubRegisterCount]uint16
+	oldCoils         [hubCoilCount]bool
+	allianceName     string // "red" or "blue" for logging purposes
 }
 
 const (
