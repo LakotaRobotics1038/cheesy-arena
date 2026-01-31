@@ -1324,8 +1324,7 @@ func (arena *Arena) handlePlcInputOutput() {
 			arena.MainPlc.SetFieldResetLight(true)
 		}
 		scoreReady := arena.RedRealtimeScore.FoulsCommitted && arena.BlueRealtimeScore.FoulsCommitted &&
-			arena.positionPostMatchScoreReady("red_near") && arena.positionPostMatchScoreReady("red_far") &&
-			arena.positionPostMatchScoreReady("blue_near") && arena.positionPostMatchScoreReady("blue_far")
+			arena.positionPostMatchScoreReady("red") && arena.positionPostMatchScoreReady("blue")
 		arena.MainPlc.SetStackLights(false, false, !scoreReady, false)
 	case AutoPeriod, PausePeriod, TeleopPeriod:
 		arena.MainPlc.SetStackBuzzer(false)

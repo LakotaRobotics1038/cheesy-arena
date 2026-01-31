@@ -422,7 +422,9 @@ main {
   flex: 1 1 0%;
   border-radius: var(--button-border-radius);
   color: var(--text-active-dark);
-  height: 100%;
+  height: 90px;
+  max-width: 400px;
+  width: 100%;
   background-color: var(--auto-action);
   font-size: 18pt;
   font-weight: bold;
@@ -574,10 +576,20 @@ dialog {
 
 .dialog-container {
   max-width: 700px;
+  max-height: 90vh;
   width: 80vw;
   padding-bottom: 20px;
   display: flex;
   flex-direction: column;
+}
+
+#endgame-inputs,
+#auto-inputs {
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 dialog::backdrop {
@@ -602,17 +614,28 @@ dialog::backdrop {
 
 .endgame-input {
   flex: 1 1 0%;
+  min-height: fit-content;
   padding: 10px;
   background-color: var(--alliance-action);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-#endgame-dialog button {
+.endgame-input .team-num {
+  font-size: 22pt;
+  color: var(--text-active);
+}
+
+.endgame-input-button {
+  flex-shrink: 0;
+}
+
+#endgame-dialog button,
+#auto-dialog button {
   cursor: auto;
-  height: 68px;
+  height: 56px;
   border: none;
   outline: none;
   border-radius: var(--button-border-radius);
@@ -621,11 +644,13 @@ dialog::backdrop {
   box-shadow: none;
 }
 
-#endgame-dialog button:enabled:not([data-selected="true"]) {
+#endgame-dialog button:enabled:not([data-selected="true"]),
+#auto-dialog button:enabled:not([data-selected="true"]) {
   box-shadow: black 0px 4px 4px;
 }
 
-#endgame-dialog button[data-selected="true"] {
+#endgame-dialog button[data-selected="true"],
+#auto-dialog button[data-selected="true"] {
   background-color: var(--alliance-highlight);
 }
 

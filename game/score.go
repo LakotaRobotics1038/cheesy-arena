@@ -19,7 +19,6 @@ var EnergizedFuelThreshold = 100
 var SuperchargedFuelThreshold = 360
 var TraversalTowerThreshold = 50
 
-
 // Represents the state of a robot at the end of the match.
 type EndgameStatus int
 

@@ -41,14 +41,25 @@ UI for entering realtime scores.
     </div>
   </div>
   <div id="hub-controls">
-    <div class="counter-wrapper">
+    <div class="counter-wrapper mb-3">
       {{template "counter" (dict "id" "auto-fuel" "label" "Auto Fuel")}}
     </div>
-    <button id="edit-auto" onclick="toggleEditAuto();" ontouchstart disabled></button>
+    <button class="mb-3" id="edit-auto" onclick="toggleEditAuto();" ontouchstart disabled></button>
     <div class="counter-wrapper">
       {{template "counter" (dict "id" "teleop-fuel" "label" "Teleop Fuel")}}
     </div>
   </div>
+  <dialog id="auto-dialog" onclick="closeAutoDialogIfOutside(event);">
+    <div class="dialog-container">
+      <div class="dialog-banner">Auto Climb</div>
+      <div id="auto-inputs">
+        {{range $i := seq 3}}
+        {{template "auto-input" (dict "id" (printf "auto-input-%d" $i) "index" $i)}}
+        {{end}}
+      </div>
+      <button class="dialog-close" autofocus onclick="closeAutoDialog();" ontouchstart>Save</button>
+    </div>
+  </dialog>
   <dialog id="endgame-dialog" onclick="closeEndgameDialogIfOutside(event);">
     <div class="dialog-container">
       <div class="dialog-banner">Tower Levels</div>
@@ -115,6 +126,19 @@ UI for entering realtime scores.
     +1
   </button>
 </div>
+{{end}}
+
+{{define "auto-input"}}
+<div id="{{.id}}" class="endgame-input team-{{.index}}">
+  <div class="team-num"></div>
+  {{template "auto-input-button" (dict "label" "Level 1" "autoState" 1 "index" .index)}}
+  {{template "auto-input-button" (dict "label" "None" "autoState" 0 "index" .index)}}
+</div>
+{{end}}
+{{define "auto-input-button"}}
+<button class="endgame-input-button endgame-{{.autoState}}"
+  onclick="handleAutoClick({{.index}}, {{.autoState}});">{{.label}}
+</button>
 {{end}}
 
 {{define "endgame-input"}}

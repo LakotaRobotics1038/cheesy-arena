@@ -10,7 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
+	"sync"
 
 	"github.com/Team254/cheesy-arena/field"
 	"github.com/Team254/cheesy-arena/game"
@@ -29,42 +29,40 @@ type ScoringPosition struct {
 	ScoresTower   bool
 }
 
+// Track auto saved state per alliance
+var autoSavedByAlliance = map[string]bool{
+	"red":  false,
+	"blue": false,
+}
+
+var autoSavedMutex sync.Mutex
+
+// ResetAutoSaved resets the auto saved state for both alliances (called on match load)
+func ResetAutoSaved() {
+	autoSavedMutex.Lock()
+	defer autoSavedMutex.Unlock()
+	autoSavedByAlliance["red"] = false
+	autoSavedByAlliance["blue"] = false
+}
+
 var positionParameters = map[string]ScoringPosition{
-	"red_near": {
-		Title:         "Red Near",
+	"red": {
+		Title:         "Red",
 		Alliance:      "red",
 		NearSide:      true,
 		ScoresAuto:    true,
 		ScoresEndgame: true,
 		ScoresHub:     true,
-		ScoresTower:   false,
-	},
-	"red_far": {
-		Title:         "Red Far",
-		Alliance:      "red",
-		NearSide:      false,
-		ScoresAuto:    false,
-		ScoresEndgame: false,
-		ScoresHub:     false,
 		ScoresTower:   true,
 	},
-	"blue_near": {
-		Title:         "Blue Near",
-		Alliance:      "blue",
-		NearSide:      true,
-		ScoresAuto:    false,
-		ScoresEndgame: false,
-		ScoresHub:     false,
-		ScoresTower:   true,
-	},
-	"blue_far": {
-		Title:         "Blue Far",
+	"blue": {
+		Title:         "Blue",
 		Alliance:      "blue",
 		NearSide:      false,
 		ScoresAuto:    true,
 		ScoresEndgame: true,
 		ScoresHub:     true,
-		ScoresTower:   false,
+		ScoresTower:   true,
 	},
 }
 
@@ -108,11 +106,11 @@ func (web *Web) scoringPanelWebsocketHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	position := r.PathValue("position")
-	if position != "red_near" && position != "red_far" && position != "blue_near" && position != "blue_far" {
+	if position != "red" && position != "blue" {
 		handleWebErr(w, fmt.Errorf("Invalid position '%s'.", position))
 		return
 	}
-	alliance := strings.Split(position, "_")[0]
+	alliance := position
 
 	var realtimeScore **field.RealtimeScore
 	if alliance == "red" {
@@ -134,6 +132,17 @@ func (web *Web) scoringPanelWebsocketHandler(w http.ResponseWriter, r *http.Requ
 
 	// Instruct panel to clear any local state in case this is a reconnect
 	ws.Write("resetLocalState", nil)
+
+	// Send initial AutoSaved status
+	autoSavedMutex.Lock()
+	initialAutoSaved := autoSavedByAlliance[alliance]
+	autoSavedMutex.Unlock()
+	autoSavedStatus := struct {
+		AutoSaved bool
+	}{
+		AutoSaved: initialAutoSaved,
+	}
+	ws.Write("autoSavedStatus", autoSavedStatus)
 
 	// Subscribe the websocket to the notifiers whose messages will be passed on to the client, in a separate goroutine.
 	go ws.HandleNotifiers(
@@ -214,6 +223,16 @@ func (web *Web) scoringPanelWebsocketHandler(w http.ResponseWriter, r *http.Requ
 				score.AutoStatuses[args.RobotIndex] = game.EndgameStatus(args.Level)
 				scoreChanged = true
 			}
+		} else if command == "saveAuto" {
+			autoSavedMutex.Lock()
+			autoSavedByAlliance[alliance] = true
+			autoSavedMutex.Unlock()
+			scoreChanged = true
+		} else if command == "editAuto" {
+			autoSavedMutex.Lock()
+			autoSavedByAlliance[alliance] = false
+			autoSavedMutex.Unlock()
+			scoreChanged = true
 		} else if command == "setTowerLevel" {
 			args := struct {
 				RobotIndex int
@@ -256,6 +275,16 @@ func (web *Web) scoringPanelWebsocketHandler(w http.ResponseWriter, r *http.Requ
 
 		if scoreChanged {
 			web.arena.RealtimeScoreNotifier.Notify()
+			// Send AutoSaved status to this specific panel
+			autoSavedMutex.Lock()
+			currentAutoSaved := autoSavedByAlliance[alliance]
+			autoSavedMutex.Unlock()
+			autoSavedStatus := struct {
+				AutoSaved bool
+			}{
+				AutoSaved: currentAutoSaved,
+			}
+			ws.Write("autoSavedStatus", autoSavedStatus)
 		}
 	}
 }
