@@ -10,12 +10,20 @@ func _() {
 	var x [1]struct{}
 	_ = x[hubHeartbeat-0]
 	_ = x[hubActive-1]
-	_ = x[hubCoilCount-2]
+	_ = x[hubBall1Fault-2]
+	_ = x[hubBall2Fault-3]
+	_ = x[hubBall3Fault-4]
+	_ = x[hubBall4Fault-5]
+	_ = x[hubBall1-6]
+	_ = x[hubBall2-7]
+	_ = x[hubBall3-8]
+	_ = x[hubBall4-9]
+	_ = x[hubCoilCount-10]
 }
 
-const _hubCoil_name = "hubHeartbeathubActivehubCoilCount"
+const _hubCoil_name = "hubHeartbeathubActivehubBall1FaulthubBall2FaulthubBall3FaulthubBall4FaulthubBall1hubBall2hubBall3hubBall4hubCoilCount"
 
-var _hubCoil_index = [...]uint8{0, 12, 21, 33}
+var _hubCoil_index = [...]uint8{0, 12, 21, 34, 47, 60, 73, 81, 89, 97, 105, 117}
 
 func (i hubCoil) String() string {
 	idx := int(i) - 0

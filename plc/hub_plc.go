@@ -74,6 +74,14 @@ type hubCoil int
 const (
 	hubHeartbeat hubCoil = iota
 	hubActive
+	hubBall1Fault
+	hubBall2Fault
+	hubBall3Fault
+	hubBall4Fault
+	hubBall1
+	hubBall2
+	hubBall3
+	hubBall4
 	hubCoilCount
 )
 
