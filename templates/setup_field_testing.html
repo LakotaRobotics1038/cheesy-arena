@@ -85,6 +85,12 @@ UI for testing the game sounds and the LEDs and PLC connected to the field.
               <button type="button" class="btn btn-danger" onclick="setHubActive('red', false);">Deactivate</button>
             </div>
           </div>
+          <div class="mb-3">
+            <label class="form-label">Ball Count</label>
+            <div>
+              <button type="button" class="btn btn-warning" onclick="resetBallCount('red');">Reset</button>
+            </div>
+          </div>
         </div>
         <div class="col-lg-6">
           <table class="table">
@@ -137,6 +143,12 @@ UI for testing the game sounds and the LEDs and PLC connected to the field.
             <div>
               <button type="button" class="btn btn-success" onclick="setHubActive('blue', true);">Activate</button>
               <button type="button" class="btn btn-danger" onclick="setHubActive('blue', false);">Deactivate</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ball Count</label>
+            <div>
+              <button type="button" class="btn btn-warning" onclick="resetBallCount('blue');">Reset</button>
             </div>
           </div>
         </div>

@@ -39,6 +39,11 @@ var setHubActive = function (alliance, active) {
   });
 };
 
+// Sends a websocket message to reset the ball count.
+var resetBallCount = function (alliance) {
+  websocket.send("resetBallCount", alliance);
+};
+
 // Handles a websocket message to update the PLC IO status.
 var handlePlcIoChange = function (data) {
   $.each(data.Inputs, function (index, input) {

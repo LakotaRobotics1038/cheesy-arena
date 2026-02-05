@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Team254/cheesy-arena/websocket"
@@ -45,6 +46,7 @@ type ModbusHubPlc struct {
 	oldRegisters     [hubRegisterCount]uint16
 	oldCoils         [hubCoilCount]bool
 	allianceName     string // "red" or "blue" for logging purposes
+	modbusLock       sync.Mutex
 }
 
 const (
@@ -169,9 +171,19 @@ func (plc *ModbusHubPlc) GetHubCount() int {
 	return int(plc.registers[hubCount])
 }
 
-// SetHubCount sets the hub count register (not typically called - PLC updates this).
+// SetHubCount sends a command to the PLC to set the hub count to the specified value.
 func (plc *ModbusHubPlc) SetHubCount(count int) {
-	plc.registers[hubCount] = uint16(count)
+	if plc.isHealthy {
+		err := plc.sendSetHubCountCommand(uint16(count))
+		if err != nil {
+			log.Printf("Error setting hub count: %v", err)
+		}
+	}
+}
+
+// ResetHubCount sends a reset command to the PLC to set the hub count to 0.
+func (plc *ModbusHubPlc) ResetHubCount() {
+	plc.SetHubCount(0)
 }
 
 // SetHubLight sets the state of the hub LED light.
@@ -243,7 +255,10 @@ func (plc *ModbusHubPlc) resetConnection() {
 
 // Performs a single iteration of reading inputs from and writing outputs to the hub PLC.
 func (plc *ModbusHubPlc) update() {
-	plc.isHealthy = plc.readRegisters() && plc.writeRegisters() && plc.writeCoils()
+	plc.modbusLock.Lock()
+	defer plc.modbusLock.Unlock()
+
+	plc.isHealthy = plc.readRegisters() && plc.readCoils() && plc.writeRegisters() && plc.writeCoils()
 	if !plc.isHealthy {
 		plc.resetConnection()
 	}
@@ -267,23 +282,70 @@ func (plc *ModbusHubPlc) readRegisters() bool {
 	return true
 }
 
+func (plc *ModbusHubPlc) readCoils() bool {
+	if plc.client == nil {
+		return false
+	}
+
+	coils, err := plc.client.ReadCoils(0, uint16(hubCoilCount))
+	if err != nil {
+		log.Printf("%s hub PLC error reading coils: %v", plc.allianceName, err)
+		return false
+	}
+
+	// Only read input coils (faults and ball states), preserving output coils (heartbeat and active)
+	// Coils are packed as bits in bytes, so we need to unpack them
+	for i := hubBall1Fault; i < hubCoilCount; i++ {
+		byteIndex := int(i) / 8
+		bitIndex := int(i) % 8
+		if byteIndex < len(coils) {
+			plc.coils[i] = (coils[byteIndex] & (1 << uint(bitIndex))) != 0
+		}
+	}
+
+	return true
+}
+
 func (plc *ModbusHubPlc) writeRegisters() bool {
 	if plc.client == nil {
 		return false
 	}
 
-	registerBytes := make([]byte, 2*uint16(hubRegisterCount))
-	for i, register := range plc.registers {
-		registerBytes[2*i] = byte(register >> 8)
-		registerBytes[2*i+1] = byte(register)
-	}
+	// Only write the light color registers, not the read-only hubCount or hubIoConnection
+	lightBytes := make([]byte, 6) // 3 registers * 2 bytes each
+	lightBytes[0] = byte(plc.registers[hubLightRed] >> 8)
+	lightBytes[1] = byte(plc.registers[hubLightRed])
+	lightBytes[2] = byte(plc.registers[hubLightGreen] >> 8)
+	lightBytes[3] = byte(plc.registers[hubLightGreen])
+	lightBytes[4] = byte(plc.registers[hubLightBlue] >> 8)
+	lightBytes[5] = byte(plc.registers[hubLightBlue])
 
-	_, err := plc.client.WriteMultipleRegisters(0, uint16(hubRegisterCount), registerBytes)
+	_, err := plc.client.WriteMultipleRegisters(uint16(hubLightRed), 3, lightBytes)
 	if err != nil {
 		log.Printf("%s hub PLC error writing registers: %v", plc.allianceName, err)
 		return false
 	}
 	return true
+}
+
+// sendSetHubCountCommand sends a command to the PLC to set the hub count to the specified value.
+func (plc *ModbusHubPlc) sendSetHubCountCommand(count uint16) error {
+	plc.modbusLock.Lock()
+	defer plc.modbusLock.Unlock()
+
+	if plc.client == nil {
+		return fmt.Errorf("PLC client is not connected")
+	}
+
+	countBytes := make([]byte, 2)
+	countBytes[0] = byte(count >> 8)
+	countBytes[1] = byte(count)
+
+	_, err := plc.client.WriteMultipleRegisters(uint16(hubCount), 1, countBytes)
+	if err != nil {
+		return fmt.Errorf("%s hub PLC error setting hub count: %v", plc.allianceName, err)
+	}
+	return nil
 }
 
 func (plc *ModbusHubPlc) writeCoils() bool {

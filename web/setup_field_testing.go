@@ -144,6 +144,20 @@ func (web *Web) fieldTestingWebsocketHandler(w http.ResponseWriter, r *http.Requ
 				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
 				continue
 			}
+		case "resetBallCount":
+			alliance, ok := data.(string)
+			if !ok {
+				ws.WriteError(fmt.Sprintf("Failed to parse '%s' message.", messageType))
+				continue
+			}
+			if alliance == "red" {
+				web.arena.RedHubPlc.SetHubCount(0)
+			} else if alliance == "blue" {
+				web.arena.BlueHubPlc.SetHubCount(0)
+			} else {
+				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
+				continue
+			}
 		default:
 			ws.WriteError(fmt.Sprintf("Invalid message type '%s'.", messageType))
 			continue
