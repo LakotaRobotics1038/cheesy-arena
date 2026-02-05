@@ -22,7 +22,7 @@ const (
 var (
 	sccDefaultUpCommands = []string{
 		"configure terminal",
-		"interface range gigabitEthernet 1/2-4",
+		"interface range FastEthernet 1/1-3",
 		"no shutdown",
 		"exit",
 		"exit",
@@ -30,7 +30,7 @@ var (
 	}
 	sccDefaultDownCommands = []string{
 		"configure terminal",
-		"interface range gigabitEthernet 1/2-4",
+		"interface range FastEthernet 1/1-3",
 		"shutdown",
 		"exit",
 		"exit",
