@@ -941,6 +941,9 @@ func (arena *Arena) setHubActive(alliance string, isActive bool, withGracePeriod
 			arena.blueHubDeactivateAt = time.Now().Add(3 * time.Second)
 		}
 	}
+
+	// Notify clients of the hub status change
+	arena.RealtimeScoreNotifier.Notify()
 }
 
 // updateHubLights checks if any hub deactivation timers on the PLC have expired.
