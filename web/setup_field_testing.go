@@ -13,6 +13,7 @@ import (
 
 	"github.com/Team254/cheesy-arena/game"
 	"github.com/Team254/cheesy-arena/model"
+	"github.com/Team254/cheesy-arena/plc"
 	"github.com/Team254/cheesy-arena/websocket"
 )
 
@@ -27,7 +28,7 @@ func (web *Web) fieldTestingGetHandler(w http.ResponseWriter, r *http.Request) {
 		handleWebErr(w, err)
 		return
 	}
-	plc := web.arena.MainPlc
+	mainPlc := web.arena.MainPlc
 	data := struct {
 		*model.EventSettings
 		MatchSounds          []*game.MatchSound
@@ -38,9 +39,11 @@ func (web *Web) fieldTestingGetHandler(w http.ResponseWriter, r *http.Request) {
 		RedHubCoilNames      []string
 		BlueHubRegisterNames []string
 		BlueHubCoilNames     []string
-	}{web.arena.EventSettings, game.MatchSounds, plc.GetInputNames(), plc.GetRegisterNames(), plc.GetCoilNames(),
+		AnimationNames       []string
+	}{web.arena.EventSettings, game.MatchSounds, mainPlc.GetInputNames(), mainPlc.GetRegisterNames(), mainPlc.GetCoilNames(),
 		web.arena.RedHubPlc.GetRegisterNames(), web.arena.RedHubPlc.GetCoilNames(),
-		web.arena.BlueHubPlc.GetRegisterNames(), web.arena.BlueHubPlc.GetCoilNames()}
+		web.arena.BlueHubPlc.GetRegisterNames(), web.arena.BlueHubPlc.GetCoilNames(),
+		plc.GetAnimationNames()}
 	err = template.ExecuteTemplate(w, "base", data)
 	if err != nil {
 		handleWebErr(w, err)
@@ -140,6 +143,30 @@ func (web *Web) fieldTestingWebsocketHandler(w http.ResponseWriter, r *http.Requ
 				web.arena.RedHubPlc.SetHubActive(active)
 			} else if alliance == "blue" {
 				web.arena.BlueHubPlc.SetHubActive(active)
+			} else {
+				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
+				continue
+			}
+		case "setHubAnimation":
+			params, ok := data.(map[string]interface{})
+			if !ok {
+				ws.WriteError(fmt.Sprintf("Failed to parse '%s' message.", messageType))
+				continue
+			}
+			alliance, ok := params["alliance"].(string)
+			if !ok {
+				ws.WriteError("Invalid alliance parameter.")
+				continue
+			}
+			animation, ok := params["animation"].(float64)
+			if !ok {
+				ws.WriteError("Invalid animation parameter.")
+				continue
+			}
+			if alliance == "red" {
+				web.arena.RedHubPlc.SetHubAnimation(plc.LedAnimation(animation))
+			} else if alliance == "blue" {
+				web.arena.BlueHubPlc.SetHubAnimation(plc.LedAnimation(animation))
 			} else {
 				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
 				continue

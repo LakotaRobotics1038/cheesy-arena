@@ -13,12 +13,13 @@ func _() {
 	_ = x[hubLightGreen-2]
 	_ = x[hubLightBlue-3]
 	_ = x[hubCount-4]
-	_ = x[hubRegisterCount-5]
+	_ = x[hubLedAnimation-5]
+	_ = x[hubRegisterCount-6]
 }
 
-const _hubRegister_name = "hubIoConnectionhubLightRedhubLightGreenhubLightBluehubCounthubRegisterCount"
+const _hubRegister_name = "hubIoConnectionhubLightRedhubLightGreenhubLightBluehubCounthubLedAnimationhubRegisterCount"
 
-var _hubRegister_index = [...]uint8{0, 15, 26, 39, 51, 59, 75}
+var _hubRegister_index = [...]uint8{0, 15, 26, 39, 51, 59, 74, 90}
 
 func (i hubRegister) String() string {
 	idx := int(i) - 0

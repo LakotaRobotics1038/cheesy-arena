@@ -28,6 +28,8 @@ type HubPlc interface {
 	SetHubCount(count int)
 	SetHubLight(active bool)
 	SetHubLightColor(red, green, blue uint16)
+	SetHubAnimation(animation LedAnimation)
+	SetHubChaserAnimation()
 	SetHubActive(active bool)
 	GetInputNames() []string
 	GetRegisterNames() []string
@@ -65,6 +67,7 @@ const (
 	hubLightGreen
 	hubLightBlue
 	hubCount
+	hubLedAnimation
 	hubRegisterCount
 )
 
@@ -86,6 +89,36 @@ const (
 	hubBall4
 	hubCoilCount
 )
+
+// Hub LED animations
+//
+//go:generate stringer -type=LedAnimation
+type LedAnimation int
+
+const (
+	AnimationRgbControl       LedAnimation = 0
+	AnimationBluePurpleFading LedAnimation = 1
+	AnimationRedSolid         LedAnimation = 2
+	AnimationBlueSolid        LedAnimation = 3
+	AnimationRedPulsing       LedAnimation = 4
+	AnimationBluePulsing      LedAnimation = 5
+	AnimationRedChasers       LedAnimation = 6
+	AnimationBlueChasers      LedAnimation = 7
+)
+
+// GetAnimationNames returns a slice of all available animation names.
+func GetAnimationNames() []string {
+	return []string{
+		AnimationRgbControl.String(),
+		AnimationBluePurpleFading.String(),
+		AnimationRedSolid.String(),
+		AnimationBlueSolid.String(),
+		AnimationRedPulsing.String(),
+		AnimationBluePulsing.String(),
+		AnimationRedChasers.String(),
+		AnimationBlueChasers.String(),
+	}
+}
 
 // NewHubPlc creates a new ModbusHubPlc instance for the given alliance.
 func NewHubPlc(allianceName string) *ModbusHubPlc {
@@ -186,36 +219,47 @@ func (plc *ModbusHubPlc) ResetHubCount() {
 	plc.SetHubCount(0)
 }
 
-// SetHubLight sets the state of the hub LED light.
+// SetHubAnimation sets the LED animation mode.
+// Possible values: AnimationRgbControl, AnimationBluePurpleFading, AnimationRedSolid, AnimationBlueSolid,
+// AnimationRedPulsing, AnimationBluePulsing, AnimationRedChasers, AnimationBlueChasers
+func (plc *ModbusHubPlc) SetHubAnimation(animation LedAnimation) {
+	plc.registers[hubLedAnimation] = uint16(animation)
+}
+
+// SetHubLight sets the state of the hub LED light using animation mode AnimationRgbControl (RGB control).
 func (plc *ModbusHubPlc) SetHubLight(active bool) {
+	plc.SetHubAnimation(AnimationRgbControl)
 	if active {
 		switch plc.allianceName {
 		case "red":
-			plc.registers[hubLightRed] = 255
-			plc.registers[hubLightGreen] = 0
-			plc.registers[hubLightBlue] = 0
+			plc.SetHubLightColor(255, 0, 0)
 		case "blue":
-			plc.registers[hubLightRed] = 0
-			plc.registers[hubLightGreen] = 0
-			plc.registers[hubLightBlue] = 255
+			plc.SetHubLightColor(0, 0, 255)
 		default:
-			plc.registers[hubLightRed] = 255
-			plc.registers[hubLightGreen] = 255
-			plc.registers[hubLightBlue] = 255
+			plc.SetHubLightColor(255, 255, 255)
 		}
 	} else {
 		// Turn off all lights
-		plc.registers[hubLightRed] = 0
-		plc.registers[hubLightGreen] = 0
-		plc.registers[hubLightBlue] = 0
+		plc.SetHubLightColor(0, 0, 0)
 	}
 }
 
-// SetHubLightColor sets the hub LED light to a specific RGB color.
+// SetHubLightColor sets the hub LED light to a specific RGB color using AnimationRgbControl.
 func (plc *ModbusHubPlc) SetHubLightColor(red, green, blue uint16) {
+	plc.registers[hubLedAnimation] = uint16(AnimationRgbControl) // Set animation to RGB control
 	plc.registers[hubLightRed] = red
 	plc.registers[hubLightGreen] = green
 	plc.registers[hubLightBlue] = blue
+}
+
+// SetHubChaserAnimation sets the appropriate white chaser animation for this hub's alliance.
+// This is used during the transition period to indicate an alliance is about to become inactive.
+func (plc *ModbusHubPlc) SetHubChaserAnimation() {
+	if plc.allianceName == "red" {
+		plc.SetHubAnimation(AnimationRedChasers) // Red with white chasers
+	} else if plc.allianceName == "blue" {
+		plc.SetHubAnimation(AnimationBlueChasers) // Blue with white chasers
+	}
 }
 
 // SetHubActive sets the active state for the hub and controls the LED light.
@@ -311,16 +355,19 @@ func (plc *ModbusHubPlc) writeRegisters() bool {
 		return false
 	}
 
-	// Only write the light color registers, not the read-only hubCount or hubIoConnection
-	lightBytes := make([]byte, 6) // 3 registers * 2 bytes each
+	// Write the light color and animation registers
+	// Start from hubLightRed, write 4 registers: hubLightRed, hubLightGreen, hubLightBlue, hubLedAnimation
+	lightBytes := make([]byte, 8) // 4 registers * 2 bytes each
 	lightBytes[0] = byte(plc.registers[hubLightRed] >> 8)
 	lightBytes[1] = byte(plc.registers[hubLightRed])
 	lightBytes[2] = byte(plc.registers[hubLightGreen] >> 8)
 	lightBytes[3] = byte(plc.registers[hubLightGreen])
 	lightBytes[4] = byte(plc.registers[hubLightBlue] >> 8)
 	lightBytes[5] = byte(plc.registers[hubLightBlue])
+	lightBytes[6] = byte(plc.registers[hubLedAnimation] >> 8)
+	lightBytes[7] = byte(plc.registers[hubLedAnimation])
 
-	_, err := plc.client.WriteMultipleRegisters(uint16(hubLightRed), 3, lightBytes)
+	_, err := plc.client.WriteMultipleRegisters(uint16(hubLightRed), 4, lightBytes)
 	if err != nil {
 		log.Printf("%s hub PLC error writing registers: %v", plc.allianceName, err)
 		return false

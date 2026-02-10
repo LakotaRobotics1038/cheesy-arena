@@ -39,6 +39,21 @@ var setHubActive = function (alliance, active) {
   });
 };
 
+// Sends a websocket message to set the hub LED animation.
+var setHubAnimation = function (alliance) {
+  var animation = parseInt($("#" + alliance + "HubAnimation").val());
+
+  if (isNaN(animation) || animation < 0 || animation > 7) {
+    alert("Please select a valid animation");
+    return;
+  }
+
+  websocket.send("setHubAnimation", {
+    alliance: alliance,
+    animation: animation
+  });
+};
+
 // Sends a websocket message to reset the ball count.
 var resetBallCount = function (alliance) {
   websocket.send("resetBallCount", alliance);

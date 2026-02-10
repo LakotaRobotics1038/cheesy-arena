@@ -790,7 +790,22 @@ func (arena *Arena) Update() {
 		// Turn hub lights green when field reset is active
 		arena.RedHubPlc.SetHubLightColor(0, 255, 0)
 		arena.BlueHubPlc.SetHubLightColor(0, 255, 0)
-	} else if arena.MatchState == AutoPeriod || arena.MatchState == TeleopPeriod {
+	} else if arena.MatchState == TeleopPeriod {
+		// Calculate transition period timing
+		transitionShiftStart := float64(
+			game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec + game.MatchTiming.PauseDurationSec,
+		)
+		transitionShiftEnd := transitionShiftStart + float64(game.MatchTiming.TransitionDurationSec)
+
+		if matchTimeSec < transitionShiftEnd {
+			// During transition period: show chaser animation for the alliance that will be inactive in shift 0
+			arena.updateHubTransitionAnimation()
+		} else {
+			// During alliance shifts: normal RGB color control
+			arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
+			arena.BlueHubPlc.SetHubLight(arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
+		}
+	} else if arena.MatchState == AutoPeriod {
 		arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
 		arena.BlueHubPlc.SetHubLight(arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
 	} else if arena.MatchState == PausePeriod {
@@ -956,6 +971,36 @@ func (arena *Arena) updateHubLights() {
 	if !arena.blueHubDeactivateAt.IsZero() && now.After(arena.blueHubDeactivateAt) {
 		arena.BlueHubPlc.SetHubActive(false)
 		arena.blueHubDeactivateAt = time.Time{}
+	}
+}
+
+// updateHubTransitionAnimation sets the LED animations during the transition period.
+// The alliance that will be inactive during the first alliance shift shows the chaser animation.
+func (arena *Arena) updateHubTransitionAnimation() {
+	if !arena.autoWinnerDetermined {
+		// If we haven't determined the winner yet, default to normal lights
+		arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
+		arena.BlueHubPlc.SetHubLight(arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
+		return
+	}
+
+	// Determine which alliance will be inactive during shift 0 (first shift after transition)
+	// If red won AUTO, red is active during even shifts (0, 2) and blue during odd shifts (1, 3)
+	// So blue will be inactive during shift 0
+	var inactiveAllianceDuringShift0 string
+	if arena.autoWinningAlliance == "red" {
+		inactiveAllianceDuringShift0 = "blue"
+	} else {
+		inactiveAllianceDuringShift0 = "red"
+	}
+
+	// Set chaser animation for the alliance that will be inactive, normal light for the active one
+	if inactiveAllianceDuringShift0 == "red" {
+		arena.RedHubPlc.SetHubChaserAnimation()
+		arena.BlueHubPlc.SetHubLight(arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
+	} else {
+		arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
+		arena.BlueHubPlc.SetHubChaserAnimation()
 	}
 }
 

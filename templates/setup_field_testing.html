@@ -86,6 +86,17 @@ UI for testing the game sounds and the LEDs and PLC connected to the field.
             </div>
           </div>
           <div class="mb-3">
+            <label class="form-label">LED Animation</label>
+            <div class="input-group">
+              <select class="form-select" id="redHubAnimation">
+                {{range $i, $name := .AnimationNames}}
+                <option value="{{$i}}">{{$name}}</option>
+                {{end}}
+              </select>
+              <button type="button" class="btn btn-primary" onclick="setHubAnimation('red');">Set</button>
+            </div>
+          </div>
+          <div class="mb-3">
             <label class="form-label">Ball Count</label>
             <div>
               <button type="button" class="btn btn-warning" onclick="resetBallCount('red');">Reset</button>
@@ -143,6 +154,17 @@ UI for testing the game sounds and the LEDs and PLC connected to the field.
             <div>
               <button type="button" class="btn btn-success" onclick="setHubActive('blue', true);">Activate</button>
               <button type="button" class="btn btn-danger" onclick="setHubActive('blue', false);">Deactivate</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">LED Animation</label>
+            <div class="input-group">
+              <select class="form-select" id="blueHubAnimation">
+                {{range $i, $name := .AnimationNames}}
+                <option value="{{$i}}">{{$name}}</option>
+                {{end}}
+              </select>
+              <button type="button" class="btn btn-primary" onclick="setHubAnimation('blue');">Set</button>
             </div>
           </div>
           <div class="mb-3">
