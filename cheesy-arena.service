@@ -1,0 +1,12 @@
+[Unit]
+Description=Starts the cheesy-arena FMS
+After=network.target
+Wants=network-online.target
+
+[Service]
+Restart=always
+Type=simple
+ExecStart=/opt/apps/cheesy-arena/cheesy-arena
+
+[Install]
+WantedBy=multi-user.target
