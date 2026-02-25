@@ -777,7 +777,9 @@ func (arena *Arena) Update() {
 	arena.handleSounds(matchTimeSec)
 
 	// Handle field sensors/lights/actuators.
-	arena.handlePlcInputOutput()
+	arena.handleMainPlcInputOutput()
+	arena.handleRedHubPlcInputOutput()
+	arena.handleBlueHubPlcInputOutput()
 
 	// Update HUB status based on match phase and fuel scoring.
 	arena.updateHubStatus(matchTimeSec)
@@ -1350,7 +1352,7 @@ func (arena *Arena) getAssignedAllianceStation(teamId int) string {
 }
 
 // Updates the score given new input information from the field PLC, and actuates PLC outputs accordingly.
-func (arena *Arena) handlePlcInputOutput() {
+func (arena *Arena) handleMainPlcInputOutput() {
 	if !arena.MainPlc.IsEnabled() {
 		return
 	}
@@ -1376,14 +1378,6 @@ func (arena *Arena) handlePlcInputOutput() {
 	arena.AllianceStations["B3"].Ethernet = blueEthernets[2]
 
 	// Handle in-match PLC functions.
-	redScore := &arena.RedRealtimeScore.CurrentScore
-	oldRedScore := *redScore
-	blueScore := &arena.BlueRealtimeScore.CurrentScore
-	oldBlueScore := *blueScore
-	matchStartTime := arena.MatchStartTime
-	currentTime := time.Now()
-	teleopGracePeriod := matchStartTime.Add(game.GetDurationToTeleopEnd() + game.TeleopGracePeriodSec*time.Second)
-	inGracePeriod := arena.MatchState == PostMatch && currentTime.Before(teleopGracePeriod) && !arena.matchAborted
 
 	redAllianceReady := arena.checkAllianceStationsReady("R1", "R2", "R3") == nil
 	blueAllianceReady := arena.checkAllianceStationsReady("B1", "B2", "B3") == nil
@@ -1425,30 +1419,6 @@ func (arena *Arena) handlePlcInputOutput() {
 		arena.MainPlc.SetStackLights(!redAllianceReady, !blueAllianceReady, false, true)
 	}
 
-	// Get all the game-specific inputs and update the score.
-	if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod || arena.MatchState == TeleopPeriod ||
-		inGracePeriod {
-		// Read ball counts from hub PLCs and update scores
-		redHubCount := arena.RedHubPlc.GetHubCount()
-		if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod {
-			redScore.Hub.AutoFuel = redHubCount
-		} else {
-			// During teleop, pause, or grace period, update TeleopFuel
-			// TeleopFuel should be total minus auto
-			redScore.Hub.TeleopFuel = redHubCount - redScore.Hub.AutoFuel
-		}
-		blueHubCount := arena.BlueHubPlc.GetHubCount()
-		if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod {
-			blueScore.Hub.AutoFuel = blueHubCount
-		} else {
-			// During teleop, pause, or grace period, update TeleopFuel
-			// TeleopFuel should be total minus auto
-			blueScore.Hub.TeleopFuel = blueHubCount - blueScore.Hub.AutoFuel
-		}
-	}
-	if !oldRedScore.Equals(redScore) || !oldBlueScore.Equals(blueScore) {
-		arena.RealtimeScoreNotifier.Notify()
-	}
 }
 
 func (arena *Arena) handleTeamStop(station string, eStopState, aStopState bool) {
@@ -1465,6 +1435,66 @@ func (arena *Arena) handleTeamStop(station string, eStopState, aStopState bool) 
 		// Keep the A-stop latched until the autonomous period is over.
 		allianceStation.AStop = false
 		allianceStation.aStopReset = true
+	}
+}
+
+// handleRedHubPlcInputOutput reads the red hub PLC count and updates the arena score object.
+func (arena *Arena) handleRedHubPlcInputOutput() {
+	if !arena.RedHubPlc.IsEnabled() {
+		return
+	}
+
+	oldRedScore := arena.RedRealtimeScore.CurrentScore
+
+	matchStartTime := arena.MatchStartTime
+	currentTime := time.Now()
+	teleopGracePeriod := matchStartTime.Add(game.GetDurationToTeleopEnd() + game.TeleopGracePeriodSec*time.Second)
+	inGracePeriod := arena.MatchState == PostMatch && currentTime.Before(teleopGracePeriod) && !arena.matchAborted
+
+	if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod || arena.MatchState == TeleopPeriod || inGracePeriod {
+		redHubCount := 0
+		if arena.RedHubPlc != nil {
+			redHubCount = arena.RedHubPlc.GetHubCount()
+		}
+		if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod {
+			arena.RedRealtimeScore.CurrentScore.Hub.AutoFuel = redHubCount
+		} else {
+			arena.RedRealtimeScore.CurrentScore.Hub.TeleopFuel = redHubCount - arena.RedRealtimeScore.CurrentScore.Hub.AutoFuel
+		}
+	}
+
+	if !oldRedScore.Equals(&arena.RedRealtimeScore.CurrentScore) {
+		arena.RealtimeScoreNotifier.Notify()
+	}
+}
+
+// handleBlueHubPlcInputOutput reads the blue hub PLC count and updates the arena score object.
+func (arena *Arena) handleBlueHubPlcInputOutput() {
+	if !arena.BlueHubPlc.IsEnabled() {
+		return
+	}
+
+	oldBlueScore := arena.BlueRealtimeScore.CurrentScore
+
+	matchStartTime := arena.MatchStartTime
+	currentTime := time.Now()
+	teleopGracePeriod := matchStartTime.Add(game.GetDurationToTeleopEnd() + game.TeleopGracePeriodSec*time.Second)
+	inGracePeriod := arena.MatchState == PostMatch && currentTime.Before(teleopGracePeriod) && !arena.matchAborted
+
+	if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod || arena.MatchState == TeleopPeriod || inGracePeriod {
+		blueHubCount := 0
+		if arena.BlueHubPlc != nil {
+			blueHubCount = arena.BlueHubPlc.GetHubCount()
+		}
+		if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod {
+			arena.BlueRealtimeScore.CurrentScore.Hub.AutoFuel = blueHubCount
+		} else {
+			arena.BlueRealtimeScore.CurrentScore.Hub.TeleopFuel = blueHubCount - arena.BlueRealtimeScore.CurrentScore.Hub.AutoFuel
+		}
+	}
+
+	if !oldBlueScore.Equals(&arena.BlueRealtimeScore.CurrentScore) {
+		arena.RealtimeScoreNotifier.Notify()
 	}
 }
 
