@@ -852,7 +852,7 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 	)
 
 	// Determine which alliance scored more FUEL during AUTO.
-	// If still tied, only randomize once the alliance shifts are about to begin.
+	// If still tied at the end of AUTO, randomize once and keep that result.
 	autoComplete := matchTimeSec >= game.GetDurationToAutoEnd().Seconds()
 	if autoComplete && !arena.autoWinnerDetermined {
 		redFuel := arena.RedRealtimeScore.CurrentScore.Hub.AutoFuel
@@ -861,10 +861,12 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 		if redFuel > blueFuel {
 			arena.autoWinningAlliance = "red"
 			arena.autoWinnerDetermined = true
+			log.Printf("AUTO winner determined: red (red=%d, blue=%d)", redFuel, blueFuel)
 		} else if blueFuel > redFuel {
 			arena.autoWinningAlliance = "blue"
 			arena.autoWinnerDetermined = true
-		} else if matchTimeSec >= transitionShiftEnd {
+			log.Printf("AUTO winner determined: blue (red=%d, blue=%d)", redFuel, blueFuel)
+		} else {
 			// If tied at the end of AUTO, randomly select per FMS behavior.
 			if rand.Intn(2) == 0 {
 				arena.autoWinningAlliance = "red"
@@ -872,6 +874,7 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 				arena.autoWinningAlliance = "blue"
 			}
 			arena.autoWinnerDetermined = true
+			log.Printf("AUTO winner random tie-break: %s (red=%d, blue=%d)", arena.autoWinningAlliance, redFuel, blueFuel)
 		}
 	}
 
