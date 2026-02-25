@@ -808,6 +808,17 @@ func (arena *Arena) Update() {
 		// Turn off lights during pause period
 		arena.RedHubPlc.SetHubLight(false)
 		arena.BlueHubPlc.SetHubLight(false)
+	} else if arena.MatchState == PostMatch {
+		if arena.FieldReset {
+			arena.RedHubPlc.SetHubLightColor(0, 255, 0)
+			arena.BlueHubPlc.SetHubLightColor(0, 255, 0)
+		} else if arena.AllianceStationDisplayMode == "signalCount" {
+			arena.RedHubPlc.SetHubLightColor(255, 0, 255)
+			arena.BlueHubPlc.SetHubLightColor(255, 0, 255)
+		} else {
+			arena.RedHubPlc.SetHubLight(false)
+			arena.BlueHubPlc.SetHubLight(false)
+		}
 	}
 
 	// Handle the team number / timer displays.
@@ -1395,16 +1406,6 @@ func (arena *Arena) handlePlcInputOutput() {
 	case PostMatch:
 		if arena.FieldReset {
 			arena.MainPlc.SetFieldResetLight(true)
-		}
-		if arena.FieldReset {
-			arena.RedHubPlc.SetHubLightColor(0, 255, 0)
-			arena.BlueHubPlc.SetHubLightColor(0, 255, 0)
-		} else if arena.AllianceStationDisplayMode == "signalCount" {
-			arena.RedHubPlc.SetHubLightColor(255, 0, 255)
-			arena.BlueHubPlc.SetHubLightColor(255, 0, 255)
-		} else {
-			arena.RedHubPlc.SetHubLight(false)
-			arena.BlueHubPlc.SetHubLight(false)
 		}
 		scoreReady := arena.RedRealtimeScore.FoulsCommitted && arena.BlueRealtimeScore.FoulsCommitted &&
 			arena.positionPostMatchScoreReady("red") && arena.positionPostMatchScoreReady("blue")
