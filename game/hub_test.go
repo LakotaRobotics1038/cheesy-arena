@@ -10,7 +10,6 @@ import (
 	"testing"
 )
 
-
 func TestHubFuelPoints(t *testing.T) {
 	hub := &Hub{
 		AutoFuel:   5,
@@ -79,4 +78,3 @@ func TestHubIsSupercharged(t *testing.T) {
 	assert.False(t, hub.IsSupercharged(50))
 	assert.True(t, hub.IsSupercharged(45))
 }
-

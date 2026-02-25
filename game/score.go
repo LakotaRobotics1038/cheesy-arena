@@ -71,6 +71,10 @@ func (score *Score) Summarize(opponentScore *Score) *ScoreSummary {
 	summary.TowerPoints += summary.AutoTowerPoints
 	summary.MatchPoints = summary.AutoFuelPoints + teleopFuelPoints + summary.TowerPoints
 
+	// ActiveFuelPoints represents the total fuel points (AUTO + TELEOP) that count
+	// toward ranking point thresholds.
+	summary.ActiveFuelPoints = summary.AutoFuelPoints + teleopFuelPoints
+
 	// Calculate penalty points.
 	if opponentScore != nil {
 		for _, foul := range opponentScore.Fouls {

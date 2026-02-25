@@ -17,9 +17,9 @@ func TestScore1() *Score {
 	}
 	return &Score{
 		Hub: Hub{
-			AutoFuel:         5,
-			TeleopFuel:       8,
-			IsActive:         true,
+			AutoFuel:   5,
+			TeleopFuel: 8,
+			IsActive:   true,
 		},
 		AutoStatuses:    [3]EndgameStatus{EndgameL1, EndgameNone, EndgameNone},
 		EndgameStatuses: [3]EndgameStatus{EndgameL2, EndgameL1, EndgameNone},
@@ -31,9 +31,9 @@ func TestScore1() *Score {
 func TestScore2() *Score {
 	return &Score{
 		Hub: Hub{
-			AutoFuel:         2,
-			TeleopFuel:       10,
-			IsActive:         true,
+			AutoFuel:   2,
+			TeleopFuel: 10,
+			IsActive:   true,
 		},
 		AutoStatuses:    [3]EndgameStatus{EndgameNone, EndgameNone, EndgameNone},
 		EndgameStatuses: [3]EndgameStatus{EndgameL3, EndgameL2, EndgameL1},

@@ -58,7 +58,7 @@ func TestCommitMatch(t *testing.T) {
 	// Committing test match should update the stored saved match but not persist anything.
 	match := &model.Match{Id: 0, Type: model.Test, Red1: 101, Red2: 102, Red3: 103, Blue1: 104, Blue2: 105, Blue3: 106}
 	matchResult := &model.MatchResult{
-		MatchId: match.Id,
+		MatchId:  match.Id,
 		RedScore: &game.Score{},
 		BlueScore: &game.Score{
 			Hub: game.Hub{
@@ -138,17 +138,17 @@ func TestCommitTiebreak(t *testing.T) {
 		// Create a perfect tie - both alliances have same score
 		RedScore: &game.Score{
 			Hub: game.Hub{
-				IsActive:         true,
-				AutoFuel:         5,
-				TeleopFuel:       8,
+				IsActive:   true,
+				AutoFuel:   5,
+				TeleopFuel: 8,
 			},
 			Fouls: []game.Foul{{FoulId: 1, IsMajor: false}},
 		},
 		BlueScore: &game.Score{
 			Hub: game.Hub{
-				IsActive:         true,
-				AutoFuel:         5,
-				TeleopFuel:       8,
+				IsActive:   true,
+				AutoFuel:   5,
+				TeleopFuel: 8,
 			},
 			Fouls: []game.Foul{{FoulId: 2, IsMajor: false}},
 		},

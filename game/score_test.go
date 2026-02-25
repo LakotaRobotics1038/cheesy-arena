@@ -15,9 +15,9 @@ func TestScoreSummary(t *testing.T) {
 	// Red summary - no fouls from opponent (TestScore2 has empty fouls)
 	redSummary := redScore.Summarize(blueScore)
 	assert.Equal(t, 13, redSummary.NumFuel)
-	assert.Equal(t, 45, redSummary.TowerPoints)     // Level1 Auto (15) + Level2 Teleop (20)
-	assert.Equal(t, 58, redSummary.MatchPoints)     // 13 + 35
-	assert.Equal(t, 0, redSummary.FoulPoints)       // No fouls from opponent
+	assert.Equal(t, 45, redSummary.TowerPoints) // Level1 Auto (15) + Level2 Teleop (20)
+	assert.Equal(t, 58, redSummary.MatchPoints) // 13 + 35
+	assert.Equal(t, 0, redSummary.FoulPoints)   // No fouls from opponent
 	assert.Equal(t, 58, redSummary.Score)
 	assert.False(t, redSummary.EnergizedRankingPoint) // 13 FUEL < 100
 	assert.False(t, redSummary.SuperchargedRankingPoint)
@@ -28,13 +28,13 @@ func TestScoreSummary(t *testing.T) {
 	// Blue summary - fouls from Red (TestScore1 has 7 fouls: 5 major (15pts) + 2 minor (5pts) = 75+10=85 points)
 	blueSummary := blueScore.Summarize(redScore)
 	assert.Equal(t, 12, blueSummary.NumFuel)
-	assert.Equal(t, 60, blueSummary.TowerPoints)     // Level3 Teleop (30)
-	assert.Equal(t, 72, blueSummary.MatchPoints)     // 12 + 30
-	assert.Equal(t, 85, blueSummary.FoulPoints)      // 5 major (15pts each) + 2 minor (5pts each) = 75+10=85
-	assert.Equal(t, 157, blueSummary.Score)          // 42 + 85
-	assert.False(t, blueSummary.EnergizedRankingPoint) // 12 FUEL < 100
+	assert.Equal(t, 60, blueSummary.TowerPoints)          // Level3 Teleop (30)
+	assert.Equal(t, 72, blueSummary.MatchPoints)          // 12 + 30
+	assert.Equal(t, 85, blueSummary.FoulPoints)           // 5 major (15pts each) + 2 minor (5pts each) = 75+10=85
+	assert.Equal(t, 157, blueSummary.Score)               // 42 + 85
+	assert.False(t, blueSummary.EnergizedRankingPoint)    // 12 FUEL < 100
 	assert.False(t, blueSummary.SuperchargedRankingPoint) // 12 FUEL < 360
-	assert.True(t, blueSummary.TraversalRankingPoint) // 30 TOWER < 50
+	assert.True(t, blueSummary.TraversalRankingPoint)     // 30 TOWER < 50
 	assert.Equal(t, 1, blueSummary.BonusRankingPoints)
 	assert.Equal(t, 5, blueSummary.NumOpponentMajorFouls)
 }

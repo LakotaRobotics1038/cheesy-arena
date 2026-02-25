@@ -286,7 +286,6 @@ func (plc *ModbusPlc) GetCoilNames() []string {
 	return coilNames
 }
 
-
 func (plc *ModbusPlc) connect() error {
 	address := fmt.Sprintf("%s:%d", plc.address, modbusPort)
 	handler := modbus.NewTCPClientHandler(address)

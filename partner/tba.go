@@ -53,25 +53,25 @@ type TbaAlliance struct {
 }
 
 type TbaScoreBreakdown struct {
-	AutoLineRobot1         string  `mapstructure:"autoLineRobot1"`
-	AutoLineRobot2         string  `mapstructure:"autoLineRobot2"`
-	AutoLineRobot3         string  `mapstructure:"autoLineRobot3"`
-	AutoFuel               int  `mapstructure:"autoFuel"`
-	TeleopFuel             int  `mapstructure:"teleopFuel"`
-	FuelPoints             int  `mapstructure:"fuelPoints"`
-	EndGameRobot1          string  `mapstructure:"endGameRobot1"`
-	EndGameRobot2          string  `mapstructure:"endGameRobot2"`
-	EndGameRobot3          string  `mapstructure:"endGameRobot3"`
-	TowerPoints            int  `mapstructure:"towerPoints"`
-	MatchPoints            int  `mapstructure:"matchPoints"`
-	EnergizedRankingPoint  bool `mapstructure:"energizedRankingPoint"`
-	SuperchargedRankingPoint bool `mapstructure:"superchargedRankingPoint"`
-	TraversalRankingPoint  bool `mapstructure:"traversalRankingPoint"`
-	FoulCount              int  `mapstructure:"foulCount"`
-	TechFoulCount          int  `mapstructure:"techFoulCount"`
-	FoulPoints             int  `mapstructure:"foulPoints"`
-	TotalPoints            int  `mapstructure:"totalPoints"`
-	RP                     int  `mapstructure:"rp"`
+	AutoLineRobot1           string `mapstructure:"autoLineRobot1"`
+	AutoLineRobot2           string `mapstructure:"autoLineRobot2"`
+	AutoLineRobot3           string `mapstructure:"autoLineRobot3"`
+	AutoFuel                 int    `mapstructure:"autoFuel"`
+	TeleopFuel               int    `mapstructure:"teleopFuel"`
+	FuelPoints               int    `mapstructure:"fuelPoints"`
+	EndGameRobot1            string `mapstructure:"endGameRobot1"`
+	EndGameRobot2            string `mapstructure:"endGameRobot2"`
+	EndGameRobot3            string `mapstructure:"endGameRobot3"`
+	TowerPoints              int    `mapstructure:"towerPoints"`
+	MatchPoints              int    `mapstructure:"matchPoints"`
+	EnergizedRankingPoint    bool   `mapstructure:"energizedRankingPoint"`
+	SuperchargedRankingPoint bool   `mapstructure:"superchargedRankingPoint"`
+	TraversalRankingPoint    bool   `mapstructure:"traversalRankingPoint"`
+	FoulCount                int    `mapstructure:"foulCount"`
+	TechFoulCount            int    `mapstructure:"techFoulCount"`
+	FoulPoints               int    `mapstructure:"foulPoints"`
+	TotalPoints              int    `mapstructure:"totalPoints"`
+	RP                       int    `mapstructure:"rp"`
 }
 
 type TbaRanking struct {
@@ -132,14 +132,14 @@ type TbaPublishedAward struct {
 }
 
 var leaveMapping = map[game.EndgameStatus]string{
-	game.EndgameNone:        "None",
-	game.EndgameL1:          "Level 1",
+	game.EndgameNone: "None",
+	game.EndgameL1:   "Level 1",
 }
 var endGameStatusMapping = map[game.EndgameStatus]string{
-	game.EndgameNone:        "None",
-	game.EndgameL1:          "Level 1",
-	game.EndgameL2:          "Level 2",
-	game.EndgameL3:          "Level 3",
+	game.EndgameNone: "None",
+	game.EndgameL1:   "Level 1",
+	game.EndgameL2:   "Level 2",
+	game.EndgameL3:   "Level 3",
 }
 
 func NewTbaClient(eventCode, secretId, secret string) *TbaClient {
@@ -623,7 +623,6 @@ func createTbaScoringBreakdown(
 		score = matchResult.BlueScore
 		scoreSummary = matchResult.BlueScoreSummary()
 	}
-
 
 	breakdown := TbaScoreBreakdown{
 		AutoLineRobot1:           leaveMapping[score.AutoStatuses[0]],

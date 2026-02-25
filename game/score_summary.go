@@ -6,19 +6,20 @@
 package game
 
 type ScoreSummary struct {
-	AutoTowerPoints        int
-	AutoPoints             int
-	AutoFuelPoints         int
-	NumFuel                int
-	TowerPoints            int
-	MatchPoints            int
-	FoulPoints             int
-	Score                  int
-	EnergizedRankingPoint  bool
+	AutoTowerPoints          int
+	AutoPoints               int
+	AutoFuelPoints           int
+	NumFuel                  int
+	ActiveFuelPoints         int
+	TowerPoints              int
+	MatchPoints              int
+	FoulPoints               int
+	Score                    int
+	EnergizedRankingPoint    bool
 	SuperchargedRankingPoint bool
-	TraversalRankingPoint  bool
-	BonusRankingPoints     int
-	NumOpponentMajorFouls  int
+	TraversalRankingPoint    bool
+	BonusRankingPoints       int
+	NumOpponentMajorFouls    int
 }
 
 type MatchStatus int

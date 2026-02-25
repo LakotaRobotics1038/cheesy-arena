@@ -294,9 +294,9 @@ func generateInMatchTimerRearText(arena *Arena, isRed bool) string {
 		totalFuel := redScore.CurrentScore.Hub.TotalFuel() + blueScore.CurrentScore.Hub.TotalFuel()
 		var score *game.Score
 		if isRed {
-		score = &redScore.CurrentScore
+			score = &redScore.CurrentScore
 		} else {
-		score = &blueScore.CurrentScore
+			score = &blueScore.CurrentScore
 		}
 
 		// Find the highest tower level achieved (prioritize endgame, then auto)

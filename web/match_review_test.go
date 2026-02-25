@@ -71,8 +71,8 @@ func TestMatchReviewEditExistingResult(t *testing.T) {
 
 	// Update the score to something else.
 	postBody := fmt.Sprintf(
-		"matchResultJson={\"MatchId\":%d,\"RedScore\":{},\"BlueScore\":{" +
-			"\"Fouls\":[{\"TeamId\":973,\"RuleId\":4}]}," +
+		"matchResultJson={\"MatchId\":%d,\"RedScore\":{},\"BlueScore\":{"+
+			"\"Fouls\":[{\"TeamId\":973,\"RuleId\":4}]},"+
 			"\"RedCards\":{\"105\":\"yellow\"},\"BlueCards\":{}}",
 		match.Id,
 	)
