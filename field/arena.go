@@ -1429,25 +1429,21 @@ func (arena *Arena) handlePlcInputOutput() {
 	if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod || arena.MatchState == TeleopPeriod ||
 		inGracePeriod {
 		// Read ball counts from hub PLCs and update scores
-		if arena.RedHubPlc.IsEnabled() {
-			hubCount := arena.RedHubPlc.GetHubCount()
-			if arena.MatchState == AutoPeriod {
-				redScore.Hub.AutoFuel = hubCount
-			} else {
-				// During teleop, pause, or grace period, update TeleopFuel
-				// TeleopFuel should be total minus auto
-				redScore.Hub.TeleopFuel = hubCount - redScore.Hub.AutoFuel
-			}
+		redHubCount := arena.RedHubPlc.GetHubCount()
+		if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod {
+			redScore.Hub.AutoFuel = redHubCount
+		} else {
+			// During teleop, pause, or grace period, update TeleopFuel
+			// TeleopFuel should be total minus auto
+			redScore.Hub.TeleopFuel = redHubCount - redScore.Hub.AutoFuel
 		}
-		if arena.BlueHubPlc.IsEnabled() {
-			hubCount := arena.BlueHubPlc.GetHubCount()
-			if arena.MatchState == AutoPeriod {
-				blueScore.Hub.AutoFuel = hubCount
-			} else {
-				// During teleop, pause, or grace period, update TeleopFuel
-				// TeleopFuel should be total minus auto
-				blueScore.Hub.TeleopFuel = hubCount - blueScore.Hub.AutoFuel
-			}
+		blueHubCount := arena.BlueHubPlc.GetHubCount()
+		if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod {
+			blueScore.Hub.AutoFuel = blueHubCount
+		} else {
+			// During teleop, pause, or grace period, update TeleopFuel
+			// TeleopFuel should be total minus auto
+			blueScore.Hub.TeleopFuel = blueHubCount - blueScore.Hub.AutoFuel
 		}
 	}
 	if !oldRedScore.Equals(redScore) || !oldBlueScore.Equals(blueScore) {
