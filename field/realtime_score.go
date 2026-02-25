@@ -14,5 +14,8 @@ type RealtimeScore struct {
 }
 
 func NewRealtimeScore() *RealtimeScore {
-	return &RealtimeScore{Cards: make(map[string]string)}
+	realtimeScore := &RealtimeScore{Cards: make(map[string]string)}
+	// Initialize the Hub with IsActive = true
+	realtimeScore.CurrentScore.Hub = *game.NewHub()
+	return realtimeScore
 }
