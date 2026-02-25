@@ -64,6 +64,148 @@ UI for testing the game sounds and the LEDs and PLC connected to the field.
         </div>
       </div>
     </div>
+    <div class="card card-body bg-body-tertiary mt-3">
+      <legend>Red Hub PLC</legend>
+      <div class="row">
+        <div class="col-lg-6">
+          <h5 class="text-danger">Hub Controls</h5>
+          <div class="mb-3">
+            <label class="form-label">Light Color (RGB)</label>
+            <div class="input-group">
+              <input type="number" class="form-control" id="redHubRed" min="0" max="255" value="0" placeholder="R">
+              <input type="number" class="form-control" id="redHubGreen" min="0" max="255" value="0" placeholder="G">
+              <input type="number" class="form-control" id="redHubBlue" min="0" max="255" value="0" placeholder="B">
+              <button type="button" class="btn btn-primary" onclick="setHubLightColor('red');">Set</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Hub Active</label>
+            <div>
+              <button type="button" class="btn btn-success" onclick="setHubActive('red', true);">Activate</button>
+              <button type="button" class="btn btn-danger" onclick="setHubActive('red', false);">Deactivate</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">LED Animation</label>
+            <div class="input-group">
+              <select class="form-select" id="redHubAnimation">
+                {{range $i, $name := .AnimationNames}}
+                <option value="{{$i}}">{{$name}}</option>
+                {{end}}
+              </select>
+              <button type="button" class="btn btn-primary" onclick="setHubAnimation('red');">Set</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ball Count</label>
+            <div>
+              <button type="button" class="btn btn-warning" onclick="resetBallCount('red');">Reset</button>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <table class="table">
+            <tr>
+              <th class="bg-danger" colspan="2">Registers</th>
+            </tr>
+            {{range $i, $name := .RedHubRegisterNames}}
+            <tr>
+              <td class="bg-body-tertiary">{{$name}}</td>
+              <td class="bg-body-tertiary" id="redHubRegister{{$i}}"></td>
+            </tr>
+            {{end}}
+          </table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-lg-6">
+        </div>
+        <div class="col-lg-6">
+          <table class="table">
+            <tr>
+              <th class="bg-danger" colspan="2">Coils</th>
+            </tr>
+            {{range $i, $name := .RedHubCoilNames}}
+            <tr>
+              <td class="bg-body-tertiary">{{$name}}</td>
+              <td class="bg-body-tertiary" id="redHubCoil{{$i}}" data-plc-value="false"></td>
+            </tr>
+            {{end}}
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="card card-body bg-body-tertiary mt-3">
+      <legend>Blue Hub PLC</legend>
+      <div class="row">
+        <div class="col-lg-6">
+          <h5 class="text-primary">Hub Controls</h5>
+          <div class="mb-3">
+            <label class="form-label">Light Color (RGB)</label>
+            <div class="input-group">
+              <input type="number" class="form-control" id="blueHubRed" min="0" max="255" value="0" placeholder="R">
+              <input type="number" class="form-control" id="blueHubGreen" min="0" max="255" value="0" placeholder="G">
+              <input type="number" class="form-control" id="blueHubBlue" min="0" max="255" value="0" placeholder="B">
+              <button type="button" class="btn btn-primary" onclick="setHubLightColor('blue');">Set</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Hub Active</label>
+            <div>
+              <button type="button" class="btn btn-success" onclick="setHubActive('blue', true);">Activate</button>
+              <button type="button" class="btn btn-danger" onclick="setHubActive('blue', false);">Deactivate</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">LED Animation</label>
+            <div class="input-group">
+              <select class="form-select" id="blueHubAnimation">
+                {{range $i, $name := .AnimationNames}}
+                <option value="{{$i}}">{{$name}}</option>
+                {{end}}
+              </select>
+              <button type="button" class="btn btn-primary" onclick="setHubAnimation('blue');">Set</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ball Count</label>
+            <div>
+              <button type="button" class="btn btn-warning" onclick="resetBallCount('blue');">Reset</button>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <table class="table">
+            <tr>
+              <th class="bg-primary" colspan="2">Registers</th>
+            </tr>
+            {{range $i, $name := .BlueHubRegisterNames}}
+            <tr>
+              <td class="bg-body-tertiary">{{$name}}</td>
+              <td class="bg-body-tertiary" id="blueHubRegister{{$i}}"></td>
+            </tr>
+            {{end}}
+          </table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-lg-6">
+        </div>
+        <div class="col-lg-6">
+          <table class="table">
+            <tr>
+              <th class="bg-primary" colspan="2">Coils</th>
+            </tr>
+            {{range $i, $name := .BlueHubCoilNames}}
+            <tr>
+              <td class="bg-body-tertiary">{{$name}}</td>
+              <td class="bg-body-tertiary" id="blueHubCoil{{$i}}" data-plc-value="false"></td>
+            </tr>
+            {{end}}
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {{end}}

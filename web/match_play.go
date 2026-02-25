@@ -47,11 +47,15 @@ func (web *Web) matchPlayHandler(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		*model.EventSettings
 		PlcIsEnabled          bool
+		RedHubPlcIsEnabled    bool
+		BlueHubPlcIsEnabled   bool
 		PlcArmorBlockStatuses map[string]bool
 	}{
 		web.arena.EventSettings,
-		web.arena.Plc.IsEnabled(),
-		web.arena.Plc.GetArmorBlockStatuses(),
+		web.arena.MainPlc.IsEnabled(),
+		web.arena.RedHubPlc.IsEnabled(),
+		web.arena.BlueHubPlc.IsEnabled(),
+		web.arena.MainPlc.GetArmorBlockStatuses(),
 	}
 	err = template.ExecuteTemplate(w, "base", data)
 	if err != nil {

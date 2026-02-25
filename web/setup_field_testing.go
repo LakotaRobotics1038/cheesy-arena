@@ -7,12 +7,14 @@ package web
 
 import (
 	"fmt"
-	"github.com/Team254/cheesy-arena/game"
-	"github.com/Team254/cheesy-arena/model"
-	"github.com/Team254/cheesy-arena/websocket"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/Team254/cheesy-arena/game"
+	"github.com/Team254/cheesy-arena/model"
+	"github.com/Team254/cheesy-arena/plc"
+	"github.com/Team254/cheesy-arena/websocket"
 )
 
 // Shows the Field Testing page.
@@ -26,14 +28,22 @@ func (web *Web) fieldTestingGetHandler(w http.ResponseWriter, r *http.Request) {
 		handleWebErr(w, err)
 		return
 	}
-	plc := web.arena.Plc
+	mainPlc := web.arena.MainPlc
 	data := struct {
 		*model.EventSettings
-		MatchSounds   []*game.MatchSound
-		InputNames    []string
-		RegisterNames []string
-		CoilNames     []string
-	}{web.arena.EventSettings, game.MatchSounds, plc.GetInputNames(), plc.GetRegisterNames(), plc.GetCoilNames()}
+		MatchSounds          []*game.MatchSound
+		InputNames           []string
+		RegisterNames        []string
+		CoilNames            []string
+		RedHubRegisterNames  []string
+		RedHubCoilNames      []string
+		BlueHubRegisterNames []string
+		BlueHubCoilNames     []string
+		AnimationNames       []string
+	}{web.arena.EventSettings, game.MatchSounds, mainPlc.GetInputNames(), mainPlc.GetRegisterNames(), mainPlc.GetCoilNames(),
+		web.arena.RedHubPlc.GetRegisterNames(), web.arena.RedHubPlc.GetCoilNames(),
+		web.arena.BlueHubPlc.GetRegisterNames(), web.arena.BlueHubPlc.GetCoilNames(),
+		plc.GetAnimationNames()}
 	err = template.ExecuteTemplate(w, "base", data)
 	if err != nil {
 		handleWebErr(w, err)
@@ -55,7 +65,9 @@ func (web *Web) fieldTestingWebsocketHandler(w http.ResponseWriter, r *http.Requ
 	defer ws.Close()
 
 	// Subscribe the websocket to the notifiers whose messages will be passed on to the client, in a separate goroutine.
-	go ws.HandleNotifiers(web.arena.Plc.IoChangeNotifier())
+	go ws.HandleNotifiers(web.arena.MainPlc.IoChangeNotifier())
+	go ws.HandleNotifiers(web.arena.RedHubPlc.IoChangeNotifier())
+	go ws.HandleNotifiers(web.arena.BlueHubPlc.IoChangeNotifier())
 
 	// Loop, waiting for commands and responding to them, until the client closes the connection.
 	for {
@@ -77,6 +89,102 @@ func (web *Web) fieldTestingWebsocketHandler(w http.ResponseWriter, r *http.Requ
 				continue
 			}
 			web.arena.PlaySoundNotifier.NotifyWithMessage(sound)
+		case "setHubLightColor":
+			params, ok := data.(map[string]interface{})
+			if !ok {
+				ws.WriteError(fmt.Sprintf("Failed to parse '%s' message.", messageType))
+				continue
+			}
+			alliance, ok := params["alliance"].(string)
+			if !ok {
+				ws.WriteError("Invalid alliance parameter.")
+				continue
+			}
+			red, ok := params["red"].(float64)
+			if !ok {
+				ws.WriteError("Invalid red parameter.")
+				continue
+			}
+			green, ok := params["green"].(float64)
+			if !ok {
+				ws.WriteError("Invalid green parameter.")
+				continue
+			}
+			blue, ok := params["blue"].(float64)
+			if !ok {
+				ws.WriteError("Invalid blue parameter.")
+				continue
+			}
+			if alliance == "red" {
+				web.arena.RedHubPlc.SetHubLightColor(uint16(red), uint16(green), uint16(blue))
+			} else if alliance == "blue" {
+				web.arena.BlueHubPlc.SetHubLightColor(uint16(red), uint16(green), uint16(blue))
+			} else {
+				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
+				continue
+			}
+		case "setHubActive":
+			params, ok := data.(map[string]interface{})
+			if !ok {
+				ws.WriteError(fmt.Sprintf("Failed to parse '%s' message.", messageType))
+				continue
+			}
+			alliance, ok := params["alliance"].(string)
+			if !ok {
+				ws.WriteError("Invalid alliance parameter.")
+				continue
+			}
+			active, ok := params["active"].(bool)
+			if !ok {
+				ws.WriteError("Invalid active parameter.")
+				continue
+			}
+			if alliance == "red" {
+				web.arena.RedHubPlc.SetHubActive(active)
+			} else if alliance == "blue" {
+				web.arena.BlueHubPlc.SetHubActive(active)
+			} else {
+				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
+				continue
+			}
+		case "setHubAnimation":
+			params, ok := data.(map[string]interface{})
+			if !ok {
+				ws.WriteError(fmt.Sprintf("Failed to parse '%s' message.", messageType))
+				continue
+			}
+			alliance, ok := params["alliance"].(string)
+			if !ok {
+				ws.WriteError("Invalid alliance parameter.")
+				continue
+			}
+			animation, ok := params["animation"].(float64)
+			if !ok {
+				ws.WriteError("Invalid animation parameter.")
+				continue
+			}
+			if alliance == "red" {
+				web.arena.RedHubPlc.SetHubAnimation(plc.LedAnimation(animation))
+			} else if alliance == "blue" {
+				web.arena.BlueHubPlc.SetHubAnimation(plc.LedAnimation(animation))
+			} else {
+				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
+				continue
+			}
+		case "resetBallCount":
+			alliance, ok := data.(string)
+			if !ok {
+				ws.WriteError(fmt.Sprintf("Failed to parse '%s' message.", messageType))
+				continue
+			}
+			if alliance == "red" {
+				web.arena.RedHubPlc.SetHubCount(0)
+			} else if alliance == "blue" {
+				web.arena.BlueHubPlc.SetHubCount(0)
+			} else {
+				ws.WriteError("Invalid alliance value. Must be 'red' or 'blue'.")
+				continue
+			}
 		default:
 			ws.WriteError(fmt.Sprintf("Invalid message type '%s'.", messageType))
 			continue

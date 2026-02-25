@@ -6,11 +6,13 @@
 package field
 
 import (
+	"math"
+	"strconv"
+
 	"github.com/Team254/cheesy-arena/game"
 	"github.com/Team254/cheesy-arena/model"
 	"github.com/Team254/cheesy-arena/playoff"
 	"github.com/Team254/cheesy-arena/websocket"
-	"strconv"
 )
 
 type ArenaNotifiers struct {
@@ -33,7 +35,9 @@ type ArenaNotifiers struct {
 
 type MatchTimeMessage struct {
 	MatchState
-	MatchTimeSec int
+	MatchTimeSec       int
+	CurrentShift       int
+	ShiftTimeRemaining int
 }
 
 type audienceAllianceScoreFields struct {
@@ -95,6 +99,8 @@ func (arena *Arena) generateArenaStatusMessage() any {
 		RedSCCStatus          string
 		BlueSCCStatus         string
 		PlcIsHealthy          bool
+		RedHubPlcIsHealthy    bool
+		BlueHubPlcIsHealthy   bool
 		FieldEStop            bool
 		PlcArmorBlockStatuses map[string]bool
 	}{
@@ -106,9 +112,11 @@ func (arena *Arena) generateArenaStatusMessage() any {
 		arena.networkSwitch.Status,
 		arena.redSCC.Status,
 		arena.blueSCC.Status,
-		arena.Plc.IsHealthy(),
-		arena.Plc.GetFieldEStop(),
-		arena.Plc.GetArmorBlockStatuses(),
+		arena.MainPlc.IsHealthy(),
+		arena.RedHubPlc.IsHealthy(),
+		arena.BlueHubPlc.IsHealthy(),
+		arena.MainPlc.GetFieldEStop(),
+		arena.MainPlc.GetArmorBlockStatuses(),
 	}
 }
 
@@ -202,7 +210,54 @@ func (arena *Arena) GenerateMatchLoadMessage() any {
 }
 
 func (arena *Arena) generateMatchTimeMessage() any {
-	return MatchTimeMessage{arena.MatchState, int(arena.MatchTimeSec())}
+	matchTimeSec := arena.MatchTimeSec()
+	currentShift := 0
+	shiftTimeRemaining := 0
+
+	// Calculate shift information during teleop
+	if arena.MatchState == TeleopPeriod {
+		// Calculate timing boundaries
+		teleopStartSec := float64(
+			game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec + game.MatchTiming.PauseDurationSec,
+		)
+		transitionEndSec := teleopStartSec + float64(game.MatchTiming.TransitionDurationSec)
+		endGameStartSec := float64(
+			game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec +
+				game.MatchTiming.PauseDurationSec + game.MatchTiming.TeleopDurationSec -
+				game.MatchTiming.WarningRemainingDurationSec,
+		)
+
+		if matchTimeSec < transitionEndSec {
+			// Shift 1: Transition shift
+			currentShift = 1
+			// Round up so timer starts at 10 instead of 9
+			shiftTimeRemaining = int(math.Ceil(transitionEndSec - matchTimeSec))
+		} else if matchTimeSec < endGameStartSec {
+			// Shifts 2-5: Alliance shifts
+			secIntoShifts := matchTimeSec - transitionEndSec
+			shiftNumber := int(secIntoShifts / float64(game.MatchTiming.AllianceShiftDurationSec))
+			currentShift = shiftNumber + 2 // +2 because shift 1 is transition
+
+			// Calculate time remaining in current shift
+			secIntoCurrentShift := int(secIntoShifts) % game.MatchTiming.AllianceShiftDurationSec
+			shiftTimeRemaining = game.MatchTiming.AllianceShiftDurationSec - secIntoCurrentShift
+		} else {
+			// Shift 6: End game
+			currentShift = 6
+			teleopEndSec := float64(
+				game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec +
+					game.MatchTiming.PauseDurationSec + game.MatchTiming.TeleopDurationSec,
+			)
+			shiftTimeRemaining = int(teleopEndSec - matchTimeSec)
+		}
+	}
+
+	return MatchTimeMessage{
+		MatchState:         arena.MatchState,
+		MatchTimeSec:       int(matchTimeSec),
+		CurrentShift:       currentShift,
+		ShiftTimeRemaining: shiftTimeRemaining,
+	}
 }
 
 func (arena *Arena) generateMatchTimingMessage() any {
@@ -293,7 +348,6 @@ func (arena *Arena) GenerateScorePostedMessage() any {
 		BlueWins            int
 		RedDestination      string
 		BlueDestination     string
-		CoopertitionEnabled bool
 	}{
 		arena.SavedMatch,
 		redScoreSummary,
@@ -315,7 +369,6 @@ func (arena *Arena) GenerateScorePostedMessage() any {
 		blueWins,
 		redDestination,
 		blueDestination,
-		game.CoralBonusCoopEnabled,
 	}
 }
 
@@ -339,10 +392,8 @@ func (arena *Arena) generateScoringStatusMessage() any {
 	}{
 		arena.RedRealtimeScore.FoulsCommitted && arena.BlueRealtimeScore.FoulsCommitted,
 		map[string]positionStatus{
-			"red_near":  getStatusForPosition("red_near"),
-			"red_far":   getStatusForPosition("red_far"),
-			"blue_near": getStatusForPosition("blue_near"),
-			"blue_far":  getStatusForPosition("blue_far"),
+			"red":  getStatusForPosition("red"),
+			"blue": getStatusForPosition("blue"),
 		},
 	}
 }

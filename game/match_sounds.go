@@ -33,7 +33,7 @@ func UpdateMatchSounds() {
 			float64(MatchTiming.AutoDurationSec + MatchTiming.PauseDurationSec),
 		},
 		{
-			"warning_sonar",
+			"warning",
 			"wav",
 			float64(
 				MatchTiming.AutoDurationSec + MatchTiming.PauseDurationSec + MatchTiming.TeleopDurationSec -
@@ -44,6 +44,21 @@ func UpdateMatchSounds() {
 			"end",
 			"wav",
 			float64(MatchTiming.AutoDurationSec + MatchTiming.PauseDurationSec + MatchTiming.TeleopDurationSec),
+		},
+		{
+			"levelup",
+			"wav",
+			-1,
+		},
+		{
+			"warning_sonar",
+			"wav",
+			-1,
+		},
+		{
+			"foghorn",
+			"wav",
+			-1,
 		},
 		{
 			"abort",

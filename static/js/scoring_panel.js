@@ -8,6 +8,7 @@ var websocket;
 let alliance;
 let nearSide;
 let committed = false;
+let currentMatchState = 0;
 
 // True when scoring controls in general should be available
 let scoringAvailable = false;
@@ -17,12 +18,50 @@ let commitAvailable = false;
 let inTeleop = false;
 // True when post-auto and in edit auto mode
 let editingAuto = false;
+// True when auto scoring has been saved and locked
+let autoSaved = false;
+
+let autoStatuses = [0, 0, 0];
+let endgameStatuses = [0, 0, 0];
+let tempAutoStatuses = [0, 0, 0]; // Temporary storage for auto dialog
 
 let localFoulCounts = {
   "red-minor": 0,
   "blue-minor": 0,
   "red-major": 0,
   "blue-major": 0,
+}
+
+// Handle controls to open/close the auto dialog
+const autoDialog = $("#auto-dialog")[0];
+const showAutoDialog = function () {
+  // Copy current auto statuses to temp
+  tempAutoStatuses = [...autoStatuses];
+  updateAutoDialogUI();
+  autoDialog.showModal();
+}
+const closeAutoDialog = function () {
+  // Save temp values to actual and send to server
+  for (let i = 0; i < 3; i++) {
+    if (tempAutoStatuses[i] !== autoStatuses[i]) {
+      websocket.send("setAutoTowerLevel", {RobotIndex: i, Level: tempAutoStatuses[i]});
+    }
+  }
+  autoStatuses = [...tempAutoStatuses];
+  autoDialog.close();
+}
+const closeAutoDialogIfOutside = function (event) {
+  if (event.target === autoDialog) {
+    autoDialog.close();
+  }
+}
+const updateAutoDialogUI = function () {
+  for (let i = 0; i < 3; i++) {
+    const i1 = i + 1;
+    for (let j = 0; j < 2; j++) {
+      $(`#auto-input-${i1} .endgame-${j}`).attr("data-selected", j == tempAutoStatuses[i]);
+    }
+  }
 }
 
 // Handle controls to open/close the endgame dialog
@@ -64,6 +103,10 @@ const handleMatchLoad = function (data) {
     $(".team-2 .team-num").text(data.Match.Blue2);
     $(".team-3 .team-num").text(data.Match.Blue3);
   }
+  // Reset auto saved state for new match
+  autoSaved = false;
+  editingAuto = false;
+  updateUIMode();
 };
 
 const renderLocalFoulCounts = function () {
@@ -90,13 +133,22 @@ const addFoul = function (alliance, isMajor) {
 
 // Handles a websocket message to update the match status.
 const handleMatchTime = function (data) {
+  currentMatchState = data.MatchState;
   switch (matchStates[data.MatchState]) {
     case "AUTO_PERIOD":
+      scoringAvailable = true;
+      commitAvailable = false;
+      inTeleop = false;
+      editingAuto = false;
+      autoSaved = false;
+      committed = false;
+      break;
     case "PAUSE_PERIOD":
       scoringAvailable = true;
       commitAvailable = false;
       inTeleop = false;
       editingAuto = false;
+      // Don't reset autoSaved - keep it locked if it was saved
       committed = false;
       break;
     case "TELEOP_PERIOD":
@@ -117,6 +169,7 @@ const handleMatchTime = function (data) {
       commitAvailable = false;
       inTeleop = false;
       editingAuto = false;
+      autoSaved = false;
       committed = false;
       resetFoulCounts();
   }
@@ -125,7 +178,16 @@ const handleMatchTime = function (data) {
 
 // Switch in and out of autonomous editing mode
 const toggleEditAuto = function () {
-  editingAuto = !editingAuto;
+  if (!autoSaved) {
+    // Not saved yet - clicking "Save Auto" button
+    websocket.send("saveAuto", {});
+    // Server will update autoSaved to true via realtime score
+  } else {
+    // Saved - clicking "Edit Auto" button
+    websocket.send("editAuto", {});
+    editingAuto = true;
+    // Server will update autoSaved to false via realtime score
+  }
   updateUIMode();
 }
 
@@ -133,25 +195,46 @@ const toggleEditAuto = function () {
 const resetLocalState = function () {
   committed = false;
   editingAuto = false;
+  autoSaved = false;
   updateUIMode();
 }
 
 // Refresh which UI controls are enabled/disabled
 const updateUIMode = function () {
-  $(".scoring-button").prop('disabled', !scoringAvailable);
+  const autoControlsEnabled = scoringAvailable && (!autoSaved || editingAuto);
+
+  // Auto climb buttons - enabled during auto period or when editing auto
+  $("#auto-status-1, #auto-status-2, #auto-status-3").prop('disabled', !autoControlsEnabled);
+
+  // Auto fuel counter - enabled during auto period or when editing auto
+  $("#auto-fuel .counter-increment, #auto-fuel .counter-decrement").prop('disabled', !autoControlsEnabled);
+
+  // Teleop fuel counter - enabled during teleop
+  $("#teleop-fuel .counter-increment, #teleop-fuel .counter-decrement").prop('disabled', !(inTeleop && scoringAvailable));
+
+  // Other scoring buttons
   $(".scoring-teleop-button").prop('disabled', !(inTeleop && scoringAvailable));
   $("#commit").prop('disabled', !commitAvailable);
-  $("#edit-auto").prop('disabled', !(inTeleop && scoringAvailable));
+
+  // Edit auto button - show after auto period ends (during pause or teleop)
+  const showEditAuto = scoringAvailable && (matchStates[currentMatchState] === "PAUSE_PERIOD" || inTeleop);
+  $("#edit-auto").prop('disabled', !showEditAuto);
+  $("#edit-auto").toggle(showEditAuto);
+
   $(".container").attr("data-scoring-auto", (!inTeleop || editingAuto) && scoringAvailable);
   $(".container").attr("data-in-teleop", inTeleop && scoringAvailable);
-  $("#edit-auto").text(editingAuto ? "Save Auto" : "Edit Auto");
+  $("#edit-auto").text((autoSaved && !editingAuto) ? "Edit Auto" : "Save Auto");
 }
 
 const endgameStatusNames = [
   "None",
-  "Park",
-  "Shallow",
-  "Deep",
+  "Level 1",
+  "Level 2",
+  "Level 3",
+];
+const autoStatusNames = [
+  "None",
+  "Level 1",
 ];
 
 // Handles a websocket message to update the realtime scoring fields.
@@ -164,39 +247,24 @@ const handleRealtimeScore = function (data) {
   }
   const score = realtimeScore.Score;
 
+  autoStatuses = score.AutoStatuses || [0, 0, 0];
+  endgameStatuses = score.EndgameStatuses || [0, 0, 0];
+
   for (let i = 0; i < 3; i++) {
     const i1 = i + 1;
-    $(`#auto-status-${i1} > .team-text`).text(score.LeaveStatuses[i] ? "Leave" : "None");
-    $(`#auto-status-${i1}`).attr("data-selected", score.LeaveStatuses[i]);
-    $(`#endgame-status-${i1} > .team-text`).text(endgameStatusNames[score.EndgameStatuses[i]]);
-    $(`#endgame-status-${i1}`).attr("data-selected", endgameStatusNames[score.EndgameStatuses[i]] != "None");
+    const autoStatus = autoStatuses[i] || 0;
+    const endgameStatus = endgameStatuses[i] || 0;
+    $(`#auto-status-${i1} > .team-text`).text(autoStatusNames[Math.min(autoStatus, autoStatusNames.length - 1)]);
+    $(`#auto-status-${i1}`).attr("data-selected", autoStatus !== 0);
+    $(`#endgame-status-${i1} > .team-text`).text(endgameStatusNames[endgameStatus]);
+    $(`#endgame-status-${i1}`).attr("data-selected", endgameStatus !== 0);
     for (let j = 0; j < endgameStatusNames.length; j++) {
-      $(`#endgame-input-${i1} .endgame-${j}`).attr("data-selected", j == score.EndgameStatuses[i]);
+      $(`#endgame-input-${i1} .endgame-${j}`).attr("data-selected", j == endgameStatus);
     }
   }
 
-  for (let i = 0; i < 12; i++) {
-    const i1 = i + 1;
-    for (let j = 0; j < 3; j++) {
-      const j2 = j + 2;
-      $(`#reef-column-${i1}`).attr(`data-l${j2}-scored`, score.Reef.Branches[j][i]);
-      $(`#reef-column-${i1}`).attr(`data-l${j2}-auto-scored`, score.Reef.AutoBranches[j][i]);
-    }
-  }
-
-  const l1Total = score.Reef.TroughNear + score.Reef.TroughFar;
-  $("#l1-total-count").text(l1Total);
-  
-  $(`#barge .counter-value`).text(score.BargeAlgae);
-  $(`#processor .counter-value`).text(score.ProcessorAlgae);
-
-  if (nearSide) {
-    $(`#trough .counter-value`).text(score.Reef.TroughNear);
-    $(`#trough .counter-auto-value`).text(score.Reef.AutoTroughNear);
-  } else {
-    $(`#trough .counter-value`).text(score.Reef.TroughFar);
-    $(`#trough .counter-auto-value`).text(score.Reef.AutoTroughFar);
-  }
+  $(`#auto-fuel .counter-value`).text(score.Hub.AutoFuel);
+  $(`#teleop-fuel .counter-value`).text(score.Hub.TeleopFuel);
 
   redFouls = data.Red.Score.Fouls || [];
   blueFouls = data.Blue.Score.Fouls || [];
@@ -207,7 +275,19 @@ const handleRealtimeScore = function (data) {
 };
 
 // Websocket message senders for various buttons
+const handleAutoClick = function (teamPosition, autoStatus) {
+  const index = teamPosition - 1;
+  tempAutoStatuses[index] = autoStatus;
+  updateAutoDialogUI();
+}
 const handleCounterClick = function (command, adjustment) {
+  if (command === "auto-fuel" || command === "teleop-fuel") {
+    const isAuto = command === "auto-fuel";
+    const fuelCommand = adjustment > 0 ? "addFuel" : "removeFuel";
+    websocket.send(fuelCommand, {IsAuto: isAuto});
+    return;
+  }
+
   websocket.send(command, {
     Adjustment: adjustment,
     Current: true,
@@ -215,20 +295,14 @@ const handleCounterClick = function (command, adjustment) {
     NearSide: nearSide
   });
 }
-const handleLeaveClick = function (teamPosition) {
-  websocket.send("leave", {TeamPosition: teamPosition});
+const handleAutoTowerClick = function (teamPosition) {
+  const index = teamPosition - 1;
+  const current = autoStatuses[index] || 0;
+  const next = current === 0 ? 1 : 0;
+  websocket.send("setAutoTowerLevel", {RobotIndex: index, Level: next});
 }
 const handleEndgameClick = function (teamPosition, endgameStatus) {
-  websocket.send("endgame", {TeamPosition: teamPosition, EndgameStatus: endgameStatus});
-}
-const handleReefClick = function (reefPosition, reefLevel) {
-  websocket.send("reef", {
-    ReefPosition: reefPosition,
-    ReefLevel: reefLevel,
-    Current: !editingAuto,
-    Autonomous: !inTeleop || editingAuto,
-    NearSide: nearSide
-  });
+  websocket.send("setTowerLevel", {RobotIndex: teamPosition - 1, Level: endgameStatus});
 }
 
 // Sends a websocket message to indicate that the score for this alliance is ready.
@@ -260,6 +334,17 @@ $(function () {
     },
     realtimeScore: function (event) {
       handleRealtimeScore(event.data);
+    },
+    autoSavedStatus: function (event) {
+      const serverAutoSaved = event.data.AutoSaved || false;
+      if (serverAutoSaved !== autoSaved) {
+        autoSaved = serverAutoSaved;
+        // When auto gets saved, exit editing mode
+        if (autoSaved) {
+          editingAuto = false;
+        }
+        updateUIMode();
+      }
     },
     resetLocalState: function (event) {
       resetLocalState();

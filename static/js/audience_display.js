@@ -87,20 +87,20 @@ const executeTransitionQueue = function () {
 const handleMatchLoad = function (data) {
   currentMatch = data.Match;
   $(`#${redSide}Team1`).text(currentMatch.Red1);
-  $(`#${redSide}Team1`).attr("data-yellow-card", data.Teams["R1"]?.YellowCard);
+  $(`#${redSide}Team1`).parent().attr("data-yellow-card", data.Teams["R1"]?.YellowCard);
   $(`#${redSide}Team2`).text(currentMatch.Red2);
-  $(`#${redSide}Team2`).attr("data-yellow-card", data.Teams["R2"]?.YellowCard);
+  $(`#${redSide}Team2`).parent().attr("data-yellow-card", data.Teams["R2"]?.YellowCard);
   $(`#${redSide}Team3`).text(currentMatch.Red3);
-  $(`#${redSide}Team3`).attr("data-yellow-card", data.Teams["R3"]?.YellowCard);
+  $(`#${redSide}Team3`).parent().attr("data-yellow-card", data.Teams["R3"]?.YellowCard);
   $(`#${redSide}Team1Avatar`).attr("src", getAvatarUrl(currentMatch.Red1));
   $(`#${redSide}Team2Avatar`).attr("src", getAvatarUrl(currentMatch.Red2));
   $(`#${redSide}Team3Avatar`).attr("src", getAvatarUrl(currentMatch.Red3));
   $(`#${blueSide}Team1`).text(currentMatch.Blue1);
-  $(`#${blueSide}Team1`).attr("data-yellow-card", data.Teams["B1"]?.YellowCard);
+  $(`#${blueSide}Team1`).parent().attr("data-yellow-card", data.Teams["B1"]?.YellowCard);
   $(`#${blueSide}Team2`).text(currentMatch.Blue2);
-  $(`#${blueSide}Team2`).attr("data-yellow-card", data.Teams["B2"]?.YellowCard);
+  $(`#${blueSide}Team2`).parent().attr("data-yellow-card", data.Teams["B2"]?.YellowCard);
   $(`#${blueSide}Team3`).text(currentMatch.Blue3);
-  $(`#${blueSide}Team3`).attr("data-yellow-card", data.Teams["B3"]?.YellowCard);
+  $(`#${blueSide}Team3`).parent().attr("data-yellow-card", data.Teams["B3"]?.YellowCard);
   $(`#${blueSide}Team1Avatar`).attr("src", getAvatarUrl(currentMatch.Blue1));
   $(`#${blueSide}Team2Avatar`).attr("src", getAvatarUrl(currentMatch.Blue2));
   $(`#${blueSide}Team3Avatar`).attr("src", getAvatarUrl(currentMatch.Blue3));
@@ -139,30 +139,95 @@ const handleMatchLoad = function (data) {
 const handleMatchTime = function (data) {
   translateMatchTime(data, function (matchState, matchStateText, countdownSec) {
     $("#matchTime").text(getCountdownString(countdownSec));
+
+    // Show/hide auto indicator during AUTO_PERIOD
+    if (matchState === "AUTO_PERIOD" || matchState === "PAUSE_PERIOD") {
+      $("#autoIndicator").css("display", "flex");
+    } else {
+      $("#autoIndicator").hide();
+    }
+
+    // Handle shift timer display during TELEOP_PERIOD
+    if (matchState === "TELEOP_PERIOD" && data.CurrentShift > 0) {
+      updateShiftTimer(data.CurrentShift, data.ShiftTimeRemaining);
+      $("#shiftInfo").css("display", "flex");
+    } else {
+      $("#shiftInfo").hide();
+    }
+
+    // Hide match under review when match is active
+    if (matchState === "AUTO_PERIOD" || matchState === "TELEOP_PERIOD") {
+      $("#matchUnderReview").hide();
+    }
   });
+};
+
+// Updates the shift timer display during teleop using server-provided shift data
+const updateShiftTimer = function (currentShift, shiftTimeRemaining) {
+  if (currentShift > 0) {
+    $("#shiftProgress").text(`${currentShift} / 6`);
+    const seconds = shiftTimeRemaining % 60;
+    $("#shiftTimeRemaining").text(`:${seconds.toString().padStart(2, '0')}`);
+  }
 };
 
 // Handles a websocket message to update the match score.
 const handleRealtimeScore = function (data) {
-  $(`#${redSide}ScoreNumber`).text(data.Red.ScoreSummary.Score - data.Red.ScoreSummary.BargePoints);
-  $(`#${blueSide}ScoreNumber`).text(data.Blue.ScoreSummary.Score - data.Blue.ScoreSummary.BargePoints);
+  $(`#${redSide}ScoreNumber`).text(data.Red.ScoreSummary.Score);
+  $(`#${blueSide}ScoreNumber`).text(data.Blue.ScoreSummary.Score);
 
-  let redCoral, blueCoral;
-  if (currentMatch.Type === matchTypePlayoff) {
-    redCoral = data.Red.ScoreSummary.NumCoral;
-    blueCoral = data.Blue.ScoreSummary.NumCoral;
+  // Update fuel counters for ranking points (use active fuel points, not raw total balls)
+  updateFuelCounter(redSide, data.Red.ScoreSummary.ActiveFuelPoints);
+  updateFuelCounter(blueSide, data.Blue.ScoreSummary.ActiveFuelPoints);
+
+  // Update hub active indicators
+  if (data.Red.Score.Hub.IsActive) {
+    $(`#${redSide}HubActive`).css("visibility", "visible");
   } else {
-    redCoral = `${data.Red.ScoreSummary.NumCoralLevels}/${data.Red.ScoreSummary.NumCoralLevelsGoal}`;
-    blueCoral = `${data.Blue.ScoreSummary.NumCoralLevels}/${data.Blue.ScoreSummary.NumCoralLevelsGoal}`;
+    $(`#${redSide}HubActive`).css("visibility", "hidden");
   }
-  $(`#${redSide}Coral`).text(redCoral);
-  $(`#${redSide}Algae`).text(data.Red.ScoreSummary.NumAlgae);
-  $(`#${blueSide}Coral`).text(blueCoral);
-  $(`#${blueSide}Algae`).text(data.Blue.ScoreSummary.NumAlgae);
+
+  if (data.Blue.Score.Hub.IsActive) {
+    $(`#${blueSide}HubActive`).css("visibility", "visible");
+  } else {
+    $(`#${blueSide}HubActive`).css("visibility", "hidden");
+  }
+};
+
+// Update fuel counter display based on current fuel and ranking point thresholds
+const updateFuelCounter = function (side, totalFuel) {
+  const firstThreshold = 100;
+  const secondThreshold = 360;
+
+  let currentTarget = firstThreshold;
+  if (totalFuel >= firstThreshold) {
+    currentTarget = secondThreshold;
+  }
+
+  $(`#${side}FuelCount`).text(totalFuel || 0);
+  $(`#${side}FuelTarget`).text(currentTarget);
+};
+
+// Show match under review indicator
+const handleMatchReview = function (isUnderReview) {
+  if (isUnderReview) {
+    $("#matchUnderReview").css("display", "flex");
+    $("#matchTime").hide();
+  } else {
+    $("#matchUnderReview").hide();
+    $("#matchTime").show();
+  }
 };
 
 // Handles a websocket message to populate the final score data.
 const handleScorePosted = function (data) {
+  // Show event high score banner if this is a new high score
+  if (data.IsEventHighScore) {
+    $("#eventHighScore").css("display", "flex");
+  } else {
+    $("#eventHighScore").hide();
+  }
+
   $(`#${redSide}FinalScore`).text(data.RedScoreSummary.Score);
   $(`#${redSide}FinalAlliance`).text("Alliance " + data.Match.PlayoffRedAlliance);
   setTeamInfo(redSide, 1, data.Match.Red1, data.RedCards, data.RedRankings);
@@ -173,34 +238,31 @@ const handleScorePosted = function (data) {
   } else {
     setTeamInfo(redSide, 4, 0, data.RedCards, data.RedRankings);
   }
-  $(`#${redSide}FinalLeavePoints`).text(data.RedScoreSummary.LeavePoints);
-  $(`#${redSide}FinalCoralPoints`).text(data.RedScoreSummary.CoralPoints);
-  $(`#${redSide}FinalAlgaePoints`).text(data.RedScoreSummary.AlgaePoints);
-  $(`#${redSide}FinalBargePoints`).text(data.RedScoreSummary.BargePoints);
+  $(`#${redSide}FinalAutoFuelPoints`).text(data.RedScoreSummary.AutoFuelPoints);
+  $(`#${redSide}FinalAutoTowerPoints`).text(data.RedScoreSummary.AutoTowerPoints);
+  $(`#${redSide}FinalTowerPoints`).text(data.RedScoreSummary.TowerPoints);
+  $(`#${redSide}FinalMatchPoints`).text(data.RedScoreSummary.MatchPoints);
   $(`#${redSide}FinalFoulPoints`).text(data.RedScoreSummary.FoulPoints);
-  $(`#${redSide}FinalCoopertitionBonus`).html(
-    data.RedScoreSummary.CoopertitionBonus ? "&#x2714;" : "&#x2718;"
+
+  // Use icons for ranking points instead of checkmarks
+  // Trophy icons for win (3 RPs), ball icon for Energized RP, multi-ball for Supercharged RP, tower for Traversal RP
+  $(`#${redSide}FinalEnergizedRankingPoint`).html(
+    data.RedScoreSummary.EnergizedRankingPoint ? '<i class="bi bi-circle-fill"></i>' : '<i class="bi bi-circle"></i>'
   );
-  $(`#${redSide}FinalCoopertitionBonus`).attr(
-    "data-checked", data.RedScoreSummary.CoopertitionBonus
+  $(`#${redSide}FinalEnergizedRankingPoint`).attr(
+    "data-checked", data.RedScoreSummary.EnergizedRankingPoint
   );
-  $(`#${redSide}FinalAutoBonusRankingPoint`).html(
-    data.RedScoreSummary.AutoBonusRankingPoint ? "&#x2714;" : "&#x2718;"
+  $(`#${redSide}FinalSuperchargedRankingPoint`).html(
+    data.RedScoreSummary.SuperchargedRankingPoint ? '<i class="bi bi-circles"></i>' : '<i class="bi bi-circle"></i>'
   );
-  $(`#${redSide}FinalAutoBonusRankingPoint`).attr(
-    "data-checked", data.RedScoreSummary.AutoBonusRankingPoint
+  $(`#${redSide}FinalSuperchargedRankingPoint`).attr(
+    "data-checked", data.RedScoreSummary.SuperchargedRankingPoint
   );
-  $(`#${redSide}FinalCoralBonusRankingPoint`).html(
-    data.RedScoreSummary.CoralBonusRankingPoint ? "&#x2714;" : "&#x2718;"
+  $(`#${redSide}FinalTraversalRankingPoint`).html(
+    data.RedScoreSummary.TraversalRankingPoint ? '<i class="bi bi-building"></i>' : '<i class="bi bi-building"></i>'
   );
-  $(`#${redSide}FinalCoralBonusRankingPoint`).attr(
-    "data-checked", data.RedScoreSummary.CoralBonusRankingPoint
-  );
-  $(`#${redSide}FinalBargeBonusRankingPoint`).html(
-    data.RedScoreSummary.BargeBonusRankingPoint ? "&#x2714;" : "&#x2718;"
-  );
-  $(`#${redSide}FinalBargeBonusRankingPoint`).attr(
-    "data-checked", data.RedScoreSummary.BargeBonusRankingPoint
+  $(`#${redSide}FinalTraversalRankingPoint`).attr(
+    "data-checked", data.RedScoreSummary.TraversalRankingPoint
   );
   $(`#${redSide}FinalRankingPoints`).html(data.RedRankingPoints);
   $(`#${redSide}FinalWins`).text(data.RedWins);
@@ -219,34 +281,28 @@ const handleScorePosted = function (data) {
   } else {
     setTeamInfo(blueSide, 4, 0, data.BlueCards, data.BlueRankings);
   }
-  $(`#${blueSide}FinalLeavePoints`).text(data.BlueScoreSummary.LeavePoints);
-  $(`#${blueSide}FinalCoralPoints`).text(data.BlueScoreSummary.CoralPoints);
-  $(`#${blueSide}FinalAlgaePoints`).text(data.BlueScoreSummary.AlgaePoints);
-  $(`#${blueSide}FinalBargePoints`).text(data.BlueScoreSummary.BargePoints);
+  $(`#${blueSide}FinalAutoFuelPoints`).text(data.BlueScoreSummary.AutoFuelPoints);
+  $(`#${blueSide}FinalAutoTowerPoints`).text(data.BlueScoreSummary.AutoTowerPoints);
+  $(`#${blueSide}FinalTowerPoints`).text(data.BlueScoreSummary.TowerPoints);
+  $(`#${blueSide}FinalMatchPoints`).text(data.BlueScoreSummary.MatchPoints);
   $(`#${blueSide}FinalFoulPoints`).text(data.BlueScoreSummary.FoulPoints);
-  $(`#${blueSide}FinalCoopertitionBonus`).html(
-    data.BlueScoreSummary.CoopertitionBonus ? "&#x2714;" : "&#x2718;"
+  $(`#${blueSide}FinalEnergizedRankingPoint`).html(
+    data.BlueScoreSummary.EnergizedRankingPoint ? '<i class="bi bi-circle-fill"></i>' : '<i class="bi bi-circle"></i>'
   );
-  $(`#${blueSide}FinalCoopertitionBonus`).attr(
-    "data-checked", data.BlueScoreSummary.CoopertitionBonus
+  $(`#${blueSide}FinalEnergizedRankingPoint`).attr(
+    "data-checked", data.BlueScoreSummary.EnergizedRankingPoint
   );
-  $(`#${blueSide}FinalAutoBonusRankingPoint`).html(
-    data.BlueScoreSummary.AutoBonusRankingPoint ? "&#x2714;" : "&#x2718;"
+  $(`#${blueSide}FinalSuperchargedRankingPoint`).html(
+    data.BlueScoreSummary.SuperchargedRankingPoint ? '<i class="bi bi-circles"></i>' : '<i class="bi bi-circle"></i>'
   );
-  $(`#${blueSide}FinalAutoBonusRankingPoint`).attr(
-    "data-checked", data.BlueScoreSummary.AutoBonusRankingPoint
+  $(`#${blueSide}FinalSuperchargedRankingPoint`).attr(
+    "data-checked", data.BlueScoreSummary.SuperchargedRankingPoint
   );
-  $(`#${blueSide}FinalCoralBonusRankingPoint`).html(
-    data.BlueScoreSummary.CoralBonusRankingPoint ? "&#x2714;" : "&#x2718;"
+  $(`#${blueSide}FinalTraversalRankingPoint`).html(
+    data.BlueScoreSummary.TraversalRankingPoint ? '<i class="bi bi-building"></i>' : '<i class="bi bi-building"></i>'
   );
-  $(`#${blueSide}FinalCoralBonusRankingPoint`).attr(
-    "data-checked", data.BlueScoreSummary.CoralBonusRankingPoint
-  );
-  $(`#${blueSide}FinalBargeBonusRankingPoint`).html(
-    data.BlueScoreSummary.BargeBonusRankingPoint ? "&#x2714;" : "&#x2718;"
-  );
-  $(`#${blueSide}FinalBargeBonusRankingPoint`).attr(
-    "data-checked", data.BlueScoreSummary.BargeBonusRankingPoint
+  $(`#${blueSide}FinalTraversalRankingPoint`).attr(
+    "data-checked", data.BlueScoreSummary.TraversalRankingPoint
   );
   $(`#${blueSide}FinalRankingPoints`).html(data.BlueRankingPoints);
   $(`#${blueSide}FinalWins`).text(data.BlueWins);
@@ -295,6 +351,21 @@ const handleAllianceSelection = function (data) {
       v.Index = k + 1;
     });
     $("#allianceSelection").html(allianceSelectionTemplate({alliances: alliances, numColumns: numColumns}));
+
+    // Apply strikethrough for declined teams and highlighting for captains
+    if (data.DeclinedTeamIds) {
+      $.each(data.DeclinedTeamIds, function (i, teamId) {
+        $(`.selection-cell:contains(${teamId})`).attr("data-declined", "true");
+      });
+    }
+
+    // Highlight alliance captains (first team in each alliance)
+    $(".selection-cell").each(function(index) {
+      // Every 4th cell starting from index 1 is a captain (alliance structure: alliance#, captain, pick1, pick2, pick3)
+      if (index % 4 === 1 && $(this).text().trim() !== "") {
+        $(this).attr("data-captain", "true");
+      }
+    });
   }
   if (rankedTeams) {
     let text = "";
@@ -363,15 +434,28 @@ const transitionBlankToBracket = function (callback) {
 };
 
 const transitionBlankToIntro = function (callback) {
-  $("#overlayCentering").transition(overlayCenteringShowParams, 500, "ease", function () {
-    $(".teams").css("display", "flex");
-    $(".avatars").css("display", "flex");
-    $(".avatars").css("opacity", 1);
-    $(".score").transition({queue: false, width: scoreMid}, 500, "ease", function () {
-      $("#eventMatchInfo").css("display", "flex");
-      $("#eventMatchInfo").transition({queue: false, height: eventMatchInfoDown}, 500, "ease", callback);
-    });
+  // Show the Rebuilt scorebar with animation (intro shows only header, team numbers, and avatars)
+  // Fade out scores, timer, and stats for intro
+  $("#centerClock").transition({queue: false, opacity: 0}, 300, "ease", function () {
+    $("#centerClock").hide();
   });
+  $("#leftScoreNumber").transition({queue: false, opacity: 0}, 300, "ease", function () {
+    $("#leftScoreNumber").hide();
+  });
+  $("#rightScoreNumber").transition({queue: false, opacity: 0}, 300, "ease", function () {
+    $("#rightScoreNumber").hide();
+  });
+  $(".stats-block").transition({queue: false, opacity: 0}, 300, "ease", function () {
+    $(".stats-block").hide();
+  });
+
+  $("#matchOverlay").css({opacity: 0, display: "block"});
+  $("#audienceHeader").css({opacity: 0, transform: "translateY(-100%)", display: "flex"});
+  $("#audienceScorebar").css({opacity: 0, transform: "translateY(100%)", display: "flex"});
+
+  $("#matchOverlay").transition({queue: false, opacity: 1}, 500, "ease");
+  $("#audienceHeader").transition({queue: false, opacity: 1, translateY: 0}, 500, "ease");
+  $("#audienceScorebar").transition({queue: false, opacity: 1, translateY: 0}, 500, "ease", callback);
 };
 
 const transitionBlankToLogo = function (callback) {
@@ -394,19 +478,20 @@ const transitionBlankToLogoLuma = function (callback) {
 };
 
 const transitionBlankToMatch = function (callback) {
-  $("#overlayCentering").transition(overlayCenteringShowParams, 500, "ease", function () {
-    $(".teams").css("display", "flex");
-    $(".score-fields").css("display", "flex");
-    $(".score-fields").transition({queue: false, width: scoreFieldsOut}, 500, "ease");
-    $("#logo").transition({queue: false, top: logoUp}, 500, "ease");
-    $(".score").transition({queue: false, width: scoreOut}, 500, "ease", function () {
-      $("#eventMatchInfo").css("display", "flex");
-      $("#eventMatchInfo").transition({queue: false, height: eventMatchInfoDown}, 500, "ease", callback);
-      $(".score-number").transition({queue: false, opacity: 1}, 750, "ease");
-      $("#matchTime").transition({queue: false, opacity: 1}, 750, "ease");
-      $(".score-fields").transition({queue: false, opacity: 1}, 750, "ease");
-    });
-  });
+  // Show the Rebuilt scorebar with animation
+  // Make sure all match play elements are visible
+  $("#centerClock").show();
+  $("#leftScoreNumber").show();
+  $("#rightScoreNumber").show();
+  $(".stats-block").show();
+
+  $("#matchOverlay").css({opacity: 0, display: "block"});
+  $("#audienceHeader").css({opacity: 0, transform: "translateY(-100%)", display: "flex"});
+  $("#audienceScorebar").css({opacity: 0, transform: "translateY(100%)", display: "flex"});
+
+  $("#matchOverlay").transition({queue: false, opacity: 1}, 500, "ease");
+  $("#audienceHeader").transition({queue: false, opacity: 1, translateY: 0}, 500, "ease");
+  $("#audienceScorebar").transition({queue: false, opacity: 1, translateY: 0}, 500, "ease", callback);
 };
 
 const transitionBlankToScore = function (callback) {
@@ -475,28 +560,44 @@ const transitionBracketToSponsor = function (callback) {
 };
 
 const transitionIntroToBlank = function (callback) {
-  $("#eventMatchInfo").transition({queue: false, height: eventMatchInfoUp}, 500, "ease", function () {
-    $("#eventMatchInfo").hide();
-    $(".score").transition({queue: false, width: scoreIn}, 500, "ease", function () {
-      $(".avatars").css("opacity", 0);
-      $(".avatars").hide();
-      $(".teams").hide();
-      $("#overlayCentering").transition(overlayCenteringHideParams, 1000, "ease", callback);
-    });
+  // Hide the Rebuilt scorebar with animation
+  $("#audienceHeader").transition({queue: false, opacity: 0, translateY: "-100%"}, 500, "ease");
+  $("#audienceScorebar").transition({queue: false, opacity: 0, translateY: "100%"}, 500, "ease");
+  $("#matchOverlay").transition({queue: false, opacity: 0}, 500, "ease", function () {
+    $("#audienceHeader").css("display", "none");
+    $("#audienceScorebar").css("display", "none");
+    $("#matchOverlay").css("display", "none");
+    callback();
   });
 };
 
 const transitionIntroToMatch = function (callback) {
-  $(".avatars").transition({queue: false, opacity: 0}, 500, "ease", function () {
-    $(".avatars").hide();
+  // Fade in the elements that were hidden for intro: scores, timer, and stats
+  $("#centerClock").show();
+  $("#leftScoreNumber").show();
+  $("#rightScoreNumber").show();
+  $(".stats-block").show();
+
+  $("#centerClock").transition({queue: false, opacity: 1}, 300, "ease");
+  $("#leftScoreNumber").transition({queue: false, opacity: 1}, 300, "ease");
+  $("#rightScoreNumber").transition({queue: false, opacity: 1}, 300, "ease");
+  $(".stats-block").transition({queue: false, opacity: 1}, 300, "ease", callback);
+};
+
+const transitionMatchToIntro = function (callback) {
+  // Fade out the match play elements for intro display
+  $("#centerClock").transition({queue: false, opacity: 0}, 300, "ease", function () {
+    $("#centerClock").hide();
   });
-  $(".score-fields").css("display", "flex");
-  $(".score-fields").transition({queue: false, width: scoreFieldsOut}, 500, "ease");
-  $("#logo").transition({queue: false, top: logoUp}, 500, "ease");
-  $(".score").transition({queue: false, width: scoreOut}, 500, "ease", function () {
-    $(".score-number").transition({queue: false, opacity: 1}, 750, "ease");
-    $("#matchTime").transition({queue: false, opacity: 1}, 750, "ease", callback);
-    $(".score-fields").transition({queue: false, opacity: 1}, 750, "ease");
+  $("#leftScoreNumber").transition({queue: false, opacity: 0}, 300, "ease", function () {
+    $("#leftScoreNumber").hide();
+  });
+  $("#rightScoreNumber").transition({queue: false, opacity: 0}, 300, "ease", function () {
+    $("#rightScoreNumber").hide();
+  });
+  $(".stats-block").transition({queue: false, opacity: 0}, 300, "ease", function () {
+    $(".stats-block").hide();
+    callback();
   });
 };
 
@@ -586,32 +687,14 @@ const transitionLogoLumaToScore = function (callback) {
 };
 
 const transitionMatchToBlank = function (callback) {
-  $("#eventMatchInfo").transition({queue: false, height: eventMatchInfoUp}, 500, "ease");
-  $("#matchTime").transition({queue: false, opacity: 0}, 300, "linear");
-  $(".score-fields").transition({queue: false, opacity: 0}, 300, "ease");
-  $(".score-number").transition({queue: false, opacity: 0}, 300, "linear", function () {
-    $("#eventMatchInfo").hide();
-    $(".score-fields").transition({queue: false, width: 0}, 500, "ease");
-    $("#logo").transition({queue: false, top: logoDown}, 500, "ease");
-    $(".score").transition({queue: false, width: scoreIn}, 500, "ease", function () {
-      $(".teams").hide();
-      $(".score-fields").hide();
-      $("#overlayCentering").transition(overlayCenteringHideParams, 1000, "ease", callback);
-    });
-  });
-};
-
-const transitionMatchToIntro = function (callback) {
-  $(".score-number").transition({queue: false, opacity: 0}, 300, "linear");
-  $(".score-fields").transition({queue: false, opacity: 0}, 300, "ease");
-  $("#matchTime").transition({queue: false, opacity: 0}, 300, "linear", function () {
-    $(".score-fields").transition({queue: false, width: 0}, 500, "ease");
-    $("#logo").transition({queue: false, top: logoDown}, 500, "ease");
-    $(".score").transition({queue: false, width: scoreMid}, 500, "ease", function () {
-      $(".score-fields").hide();
-      $(".avatars").css("display", "flex");
-      $(".avatars").transition({queue: false, opacity: 1}, 500, "ease", callback);
-    });
+  // Hide the Rebuilt scorebar with animation
+  $("#audienceHeader").transition({queue: false, opacity: 0, translateY: "-100%"}, 500, "ease");
+  $("#audienceScorebar").transition({queue: false, opacity: 0, translateY: "100%"}, 500, "ease");
+  $("#matchOverlay").transition({queue: false, opacity: 0}, 500, "ease", function () {
+    $("#audienceHeader").css({display: "none", opacity: "", transform: ""});
+    $("#audienceScorebar").css({display: "none", opacity: "", transform: ""});
+    $("#matchOverlay").css({display: "none", opacity: ""});
+    callback();
   });
 };
 

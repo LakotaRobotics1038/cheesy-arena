@@ -10,6 +10,55 @@ var playSound = function (sound) {
   websocket.send("playSound", sound);
 };
 
+// Sends a websocket message to set the hub light color.
+var setHubLightColor = function (alliance) {
+  var red = parseInt($("#" + alliance + "HubRed").val());
+  var green = parseInt($("#" + alliance + "HubGreen").val());
+  var blue = parseInt($("#" + alliance + "HubBlue").val());
+
+  if (isNaN(red) || red < 0 || red > 255 ||
+      isNaN(green) || green < 0 || green > 255 ||
+      isNaN(blue) || blue < 0 || blue > 255) {
+    alert("Please enter valid RGB values (0-255)");
+    return;
+  }
+
+  websocket.send("setHubLightColor", {
+    alliance: alliance,
+    red: red,
+    green: green,
+    blue: blue
+  });
+};
+
+// Sends a websocket message to set the hub active status.
+var setHubActive = function (alliance, active) {
+  websocket.send("setHubActive", {
+    alliance: alliance,
+    active: active
+  });
+};
+
+// Sends a websocket message to set the hub LED animation.
+var setHubAnimation = function (alliance) {
+  var animation = parseInt($("#" + alliance + "HubAnimation").val());
+
+  if (isNaN(animation) || animation < 0 || animation > 7) {
+    alert("Please select a valid animation");
+    return;
+  }
+
+  websocket.send("setHubAnimation", {
+    alliance: alliance,
+    animation: animation
+  });
+};
+
+// Sends a websocket message to reset the ball count.
+var resetBallCount = function (alliance) {
+  websocket.send("resetBallCount", alliance);
+};
+
 // Handles a websocket message to update the PLC IO status.
 var handlePlcIoChange = function (data) {
   $.each(data.Inputs, function (index, input) {
@@ -27,11 +76,41 @@ var handlePlcIoChange = function (data) {
   });
 };
 
+// Handles websocket messages for Red Hub PLC
+var handleRedHubPlcIoChange = function (data) {
+  $.each(data.Registers, function (index, register) {
+    $("#redHubRegister" + index).text(register)
+  });
+
+  $.each(data.Coils, function (index, coil) {
+    $("#redHubCoil" + index).text(coil)
+    $("#redHubCoil" + index).attr("data-plc-value", coil);
+  });
+};
+
+// Handles websocket messages for Blue Hub PLC
+var handleBlueHubPlcIoChange = function (data) {
+  $.each(data.Registers, function (index, register) {
+    $("#blueHubRegister" + index).text(register)
+  });
+
+  $.each(data.Coils, function (index, coil) {
+    $("#blueHubCoil" + index).text(coil)
+    $("#blueHubCoil" + index).attr("data-plc-value", coil);
+  });
+};
+
 $(function () {
   // Set up the websocket back to the server.
   websocket = new CheesyWebsocket("/setup/field_testing/websocket", {
     plcIoChange: function (event) {
       handlePlcIoChange(event.data);
+    },
+    redHubPlcIoChange: function (event) {
+      handleRedHubPlcIoChange(event.data);
+    },
+    blueHubPlcIoChange: function (event) {
+      handleBlueHubPlcIoChange(event.data);
     }
   });
 });

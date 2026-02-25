@@ -15,22 +15,30 @@ func TestTeamSign_GenerateInMatchRearText(t *testing.T) {
 	arena := setupTestArena(t)
 	arena.RedRealtimeScore.CurrentScore = *game.TestScore1()
 	arena.BlueRealtimeScore.CurrentScore = *game.TestScore2()
+	arena.MatchState = TeleopPeriod
 
-	assert.Equal(t, "01:23 R080-B162 1/4", generateInMatchTeamRearText(arena, true, "01:23"))
-	assert.Equal(t, "01:23 B162-R080 1/4", generateInMatchTeamRearText(arena, false, "01:23"))
-	assert.Equal(t, "1-07 2-02 3-03 4-00", generateInMatchTimerRearText(arena, true))
-	assert.Equal(t, "1-15 2-03 3-05 4-03", generateInMatchTimerRearText(arena, false))
-	arena.BlueRealtimeScore.CurrentScore.Reef.Branches[2] = [12]bool{true, true, true, true, true, true, true, true}
-	arena.BlueRealtimeScore.CurrentScore.ProcessorAlgae = 2
-	assert.Equal(t, "00:59 R080-B195 1/3", generateInMatchTeamRearText(arena, true, "00:59"))
-	assert.Equal(t, "00:59 B195-R080 2/3", generateInMatchTeamRearText(arena, false, "00:59"))
-	assert.Equal(t, "1-07 2-02 3-03 4-00", generateInMatchTimerRearText(arena, true))
-	assert.Equal(t, "1-15 2-03 3-05 4-08", generateInMatchTimerRearText(arena, false))
+	// Qualification match: show SHIFT, FUEL progress, AUTO TOWER points
+	// TestScore1 has 5+8=13 fuel, TestScore2 has 2+10=12 fuel, total=25
+	// TestScore1 AutoTower=Level1 (15 points), TestScore2 AutoTower=None (0 points)
+	// Format: "countdown SHIFT Ffuel/threshold Ttower"
+	// Note: Default match state shows "E" for END GAME since time calculation defaults to end of match
+	arena.CurrentMatch.Type = model.Qualification
+	assert.Equal(t, "01:23 E F25/100 T15", generateInMatchTeamRearText(arena, true, "01:23"))
+	assert.Equal(t, "01:23 E F25/100 T0", generateInMatchTeamRearText(arena, false, "01:23"))
 
-	// Check that RP progress is hidden for playoff matches.
+	// Timer display for qualification: FUEL and TOWER info
+	// Red hub has TeleopTower=Level2, Blue has TeleopTower=Level3
+	assert.Equal(t, "FUEL: 25 TOWER: 2", generateInMatchTimerRearText(arena, true))
+	assert.Equal(t, "FUEL: 25 TOWER: 3", generateInMatchTimerRearText(arena, false))
+
+	// Playoff match: show match scores instead
 	arena.CurrentMatch.Type = model.Playoff
-	assert.Equal(t, "00:45 R080-B195 ", generateInMatchTeamRearText(arena, true, "00:45"))
-	assert.Equal(t, "00:45 B195-R080 ", generateInMatchTeamRearText(arena, false, "00:45"))
+	assert.Equal(t, "00:45 E R058-B072", generateInMatchTeamRearText(arena, true, "00:45"))
+	assert.Equal(t, "00:45 E B072-R058", generateInMatchTeamRearText(arena, false, "00:45"))
+
+	// Timer display for playoff: match scores
+	assert.Equal(t, "058-072", generateInMatchTimerRearText(arena, true))
+	assert.Equal(t, "058-072", generateInMatchTimerRearText(arena, false))
 }
 
 func TestTeamSign_Timer(t *testing.T) {
@@ -182,9 +190,9 @@ func TestTeamSign_TeamNumber(t *testing.T) {
 	arena.AllianceStationDisplayMode = "logo"
 	arena.AudienceDisplayMode = "allianceSelection"
 	arena.AllianceSelectionShowTimer = false
-	assertSign(true, " 2025", redColor, "1503      Connect PC")
+	assertSign(true, " 2026", redColor, "1503      Connect PC")
 	arena.AllianceSelectionShowTimer = true
-	assertSign(false, " 2025", blueColor, "1503      Connect PC")
+	assertSign(false, " 2026", blueColor, "1503      Connect PC")
 	arena.AllianceStationDisplayMode = "blank"
 	assertSign(false, "     ", whiteColor, "")
 }

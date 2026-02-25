@@ -8,15 +8,16 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+
 	"github.com/Team254/cheesy-arena/game"
 	"github.com/Team254/cheesy-arena/model"
 	"github.com/Team254/cheesy-arena/partner"
 	"github.com/Team254/cheesy-arena/playoff"
 	"github.com/Team254/cheesy-arena/websocket"
-	"io"
-	"net/http"
-	"os"
-	"strconv"
 )
 
 type MatchResultWithSummary struct {
@@ -227,7 +228,7 @@ func (web *Web) teamAvatarsApiHandler(w http.ResponseWriter, r *http.Request) {
 
 	avatarPath := fmt.Sprintf("%s/%d.png", partner.AvatarsDir, teamId)
 	if _, err := os.Stat(avatarPath); os.IsNotExist(err) {
-		avatarPath = fmt.Sprintf("%s/0.png", partner.AvatarsDir)
+		avatarPath = "static/img/first-logo-icon.png"
 	}
 
 	http.ServeFile(w, r, avatarPath)

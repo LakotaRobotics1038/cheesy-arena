@@ -4,8 +4,9 @@
 package model
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEventSettingsReadWrite(t *testing.T) {
@@ -26,18 +27,16 @@ func TestEventSettingsReadWrite(t *testing.T) {
 			SelectionShowUnpickedTeams:  true,
 			TbaDownloadEnabled:          true,
 			ApChannel:                   36,
-			SCCUpCommands:               "configure terminal\ninterface range gigabitEthernet 1/2-4\nno shutdown\nexit\nexit\nexit",
-			SCCDownCommands:             "configure terminal\ninterface range gigabitEthernet 1/2-4\nshutdown\nexit\nexit\nexit",
+			SCCUpCommands:               "configure terminal\ninterface range FastEthernet 1/1-3\nno shutdown\nexit\nexit\nexit",
+			SCCDownCommands:             "configure terminal\ninterface range FastEthernet 1/1-3\nshutdown\nexit\nexit\nexit",
 			WarmupDurationSec:           0,
-			AutoDurationSec:             15,
+			AutoDurationSec:             20,
 			PauseDurationSec:            3,
-			TeleopDurationSec:           135,
-			WarningRemainingDurationSec: 20,
-			AutoBonusCoralThreshold:     1,
-			CoralBonusPerLevelThreshold: 7,
-			CoralBonusCoopEnabled:       true,
-			BargeBonusPointThreshold:    16,
-			IncludeAlgaeInBargeBonus:    false,
+			TeleopDurationSec:           140,
+			WarningRemainingDurationSec: 30,
+			EnergizedFuelThreshold:      100,
+			SuperchargedFuelThreshold:   360,
+			TraversalTowerThreshold:     50,
 			CompanionAddress:            "",
 			CompanionPort:               0,
 		},

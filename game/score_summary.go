@@ -6,25 +6,20 @@
 package game
 
 type ScoreSummary struct {
-	LeavePoints             int
-	AutoPoints              int
-	NumCoral                int
-	CoralPoints             int
-	NumAlgae                int
-	AlgaePoints             int
-	BargePoints             int
-	MatchPoints             int
-	FoulPoints              int
-	Score                   int
-	CoopertitionCriteriaMet bool
-	CoopertitionBonus       bool
-	NumCoralLevels          int
-	NumCoralLevelsGoal      int
-	AutoBonusRankingPoint   bool
-	CoralBonusRankingPoint  bool
-	BargeBonusRankingPoint  bool
-	BonusRankingPoints      int
-	NumOpponentMajorFouls   int
+	AutoTowerPoints          int
+	AutoPoints               int
+	AutoFuelPoints           int
+	NumFuel                  int
+	ActiveFuelPoints         int
+	TowerPoints              int
+	MatchPoints              int
+	FoulPoints               int
+	Score                    int
+	EnergizedRankingPoint    bool
+	SuperchargedRankingPoint bool
+	TraversalRankingPoint    bool
+	BonusRankingPoints       int
+	NumOpponentMajorFouls    int
 }
 
 type MatchStatus int
@@ -48,16 +43,19 @@ func DetermineMatchStatus(redScoreSummary, blueScoreSummary *ScoreSummary, apply
 	}
 
 	if applyPlayoffTiebreakers {
-		// Check scoring breakdowns to resolve playoff ties.
+		// Check scoring breakdowns to resolve playoff ties (2026 playoff tiebreaker rules).
+		// 1. Fewest opponent major fouls
 		if status := comparePoints(
 			redScoreSummary.NumOpponentMajorFouls, blueScoreSummary.NumOpponentMajorFouls,
 		); status != TieMatch {
 			return status
 		}
-		if status := comparePoints(redScoreSummary.AutoPoints, blueScoreSummary.AutoPoints); status != TieMatch {
+		// 2. Most AUTO fuel points
+		if status := comparePoints(redScoreSummary.AutoFuelPoints, blueScoreSummary.AutoFuelPoints); status != TieMatch {
 			return status
 		}
-		if status := comparePoints(redScoreSummary.BargePoints, blueScoreSummary.BargePoints); status != TieMatch {
+		// 3. Most tower points
+		if status := comparePoints(redScoreSummary.TowerPoints, blueScoreSummary.TowerPoints); status != TieMatch {
 			return status
 		}
 	}

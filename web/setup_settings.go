@@ -94,6 +94,8 @@ func (web *Web) settingsPostHandler(w http.ResponseWriter, r *http.Request) {
 	eventSettings.SCCUpCommands = r.PostFormValue("sccUpCommands")
 	eventSettings.SCCDownCommands = r.PostFormValue("sccDownCommands")
 	eventSettings.PlcAddress = r.PostFormValue("plcAddress")
+	eventSettings.RedHubPlcAddress = r.PostFormValue("redHubPlcAddress")
+	eventSettings.BlueHubPlcAddress = r.PostFormValue("blueHubPlcAddress")
 	eventSettings.AdminPassword = r.PostFormValue("adminPassword")
 	eventSettings.TeamSignRed1Id, _ = strconv.Atoi(r.PostFormValue("teamSignRed1Id"))
 	eventSettings.TeamSignRed2Id, _ = strconv.Atoi(r.PostFormValue("teamSignRed2Id"))
@@ -139,11 +141,9 @@ func (web *Web) settingsPostHandler(w http.ResponseWriter, r *http.Request) {
 	eventSettings.PauseDurationSec, _ = strconv.Atoi(r.PostFormValue("pauseDurationSec"))
 	eventSettings.TeleopDurationSec, _ = strconv.Atoi(r.PostFormValue("teleopDurationSec"))
 	eventSettings.WarningRemainingDurationSec, _ = strconv.Atoi(r.PostFormValue("warningRemainingDurationSec"))
-	eventSettings.AutoBonusCoralThreshold, _ = strconv.Atoi(r.PostFormValue("autoBonusCoralThreshold"))
-	eventSettings.CoralBonusPerLevelThreshold, _ = strconv.Atoi(r.PostFormValue("coralBonusPerLevelThreshold"))
-	eventSettings.CoralBonusCoopEnabled = r.PostFormValue("coralBonusCoopEnabled") == "on"
-	eventSettings.BargeBonusPointThreshold, _ = strconv.Atoi(r.PostFormValue("bargeBonusPointThreshold"))
-	eventSettings.IncludeAlgaeInBargeBonus = r.PostFormValue("includeAlgaeInBargeBonus") == "on"
+	eventSettings.EnergizedFuelThreshold, _ = strconv.Atoi(r.PostFormValue("energizedFuelThreshold"))
+	eventSettings.SuperchargedFuelThreshold, _ = strconv.Atoi(r.PostFormValue("superchargedFuelThreshold"))
+	eventSettings.TraversalTowerThreshold, _ = strconv.Atoi(r.PostFormValue("traversalTowerThreshold"))
 
 	err := web.arena.Database.UpdateEventSettings(eventSettings)
 	if err != nil {

@@ -22,7 +22,7 @@ const (
 var (
 	sccDefaultUpCommands = []string{
 		"configure terminal",
-		"interface range gigabitEthernet 1/2-4",
+		"interface range FastEthernet 1/1-3",
 		"no shutdown",
 		"exit",
 		"exit",
@@ -30,7 +30,7 @@ var (
 	}
 	sccDefaultDownCommands = []string{
 		"configure terminal",
-		"interface range gigabitEthernet 1/2-4",
+		"interface range FastEthernet 1/1-3",
 		"shutdown",
 		"exit",
 		"exit",
@@ -66,6 +66,8 @@ type EventSettings struct {
 	SCCUpCommands                    string
 	SCCDownCommands                  string
 	PlcAddress                       string
+	RedHubPlcAddress                 string
+	BlueHubPlcAddress                string
 	AdminPassword                    string
 	TeamSignRed1Id                   int
 	TeamSignRed2Id                   int
@@ -111,11 +113,9 @@ type EventSettings struct {
 	PauseDurationSec                 int
 	TeleopDurationSec                int
 	WarningRemainingDurationSec      int
-	AutoBonusCoralThreshold          int
-	CoralBonusPerLevelThreshold      int
-	CoralBonusCoopEnabled            bool
-	BargeBonusPointThreshold         int
-	IncludeAlgaeInBargeBonus         bool
+	EnergizedFuelThreshold           int // FUEL threshold for ENERGIZED RP
+	SuperchargedFuelThreshold        int // FUEL threshold for SUPERCHARGED RP
+	TraversalTowerThreshold          int // TOWER points threshold for TRAVERSAL RP
 }
 
 func (database *Database) GetEventSettings() (*EventSettings, error) {
@@ -139,17 +139,17 @@ func (database *Database) GetEventSettings() (*EventSettings, error) {
 		ApChannel:                   36,
 		SCCUpCommands:               strings.Join(sccDefaultUpCommands, "\n"),
 		SCCDownCommands:             strings.Join(sccDefaultDownCommands, "\n"),
+		RedHubPlcAddress:            "",
+		BlueHubPlcAddress:           "",
 		CompanionAddress:            "",
 		WarmupDurationSec:           game.MatchTiming.WarmupDurationSec,
 		AutoDurationSec:             game.MatchTiming.AutoDurationSec,
 		PauseDurationSec:            game.MatchTiming.PauseDurationSec,
 		TeleopDurationSec:           game.MatchTiming.TeleopDurationSec,
 		WarningRemainingDurationSec: game.MatchTiming.WarningRemainingDurationSec,
-		AutoBonusCoralThreshold:     game.AutoBonusCoralThreshold,
-		CoralBonusPerLevelThreshold: game.CoralBonusPerLevelThreshold,
-		CoralBonusCoopEnabled:       game.CoralBonusCoopEnabled,
-		BargeBonusPointThreshold:    game.BargeBonusPointThreshold,
-		IncludeAlgaeInBargeBonus:    game.IncludeAlgaeInBargeBonus,
+		EnergizedFuelThreshold:      game.EnergizedFuelThreshold,
+		SuperchargedFuelThreshold:   game.SuperchargedFuelThreshold,
+		TraversalTowerThreshold:     game.TraversalTowerThreshold,
 	}
 
 	if err := database.eventSettingsTable.create(&eventSettings); err != nil {

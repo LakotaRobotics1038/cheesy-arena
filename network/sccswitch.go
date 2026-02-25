@@ -1,25 +1,24 @@
 // Copyright 2025 Team 254. All Rights Reserved.
 // Author: pat@patfairbank.com (Patrick Fairbank)
 //
-// Methods for configuring an SCC Switch via SSH.
+// Methods for configuring an SCC Switch via Telnet.
 
 package network
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"net"
-	"strconv"
 	"sync"
 	"time"
-
-	"golang.org/x/crypto/ssh"
 )
 
 const (
 	sccSwitchConnectTimeoutSec = 5
 	sccSwitchConfigTimeoutSec  = 5
-	sccSwitchSSHPort           = 22
+	sccSwitchTelnetPort        = 23
 )
 
 type SCCSwitch struct {
@@ -38,7 +37,7 @@ type SCCSwitch struct {
 func NewSCCSwitch(address, username, password string, upCommands, downCommands []string) *SCCSwitch {
 	return &SCCSwitch{
 		address:                address,
-		port:                   sccSwitchSSHPort,
+		port:                   sccSwitchTelnetPort,
 		username:               username,
 		password:               password,
 		connectTimeoutDuration: sccSwitchConnectTimeoutSec * time.Second,
@@ -52,6 +51,12 @@ func NewSCCSwitch(address, username, password string, upCommands, downCommands [
 func (scc *SCCSwitch) SetTeamEthernetEnabled(enabled bool) error {
 	scc.mutex.Lock()
 	defer scc.mutex.Unlock()
+
+	// If no address is configured, treat the SCC as disabled and skip configuration.
+	if scc.address == "" {
+		scc.Status = "DISABLED"
+		return nil
+	}
 
 	scc.Status = "CONFIGURING"
 
@@ -75,72 +80,55 @@ func (scc *SCCSwitch) SetTeamEthernetEnabled(enabled bool) error {
 	return nil
 }
 
-// Logs into the switch via SSH and runs the given commands in sequence.
+// Logs into the switch via Telnet and runs the given commands in sequence.
 // Returns the output of the commands or an error if the operation fails.
 func (scc *SCCSwitch) runCommandSequence(commands []string) (string, error) {
-	// Open an SSH connection to the switch.
-	sshConfig := &ssh.ClientConfig{
-		User: scc.username,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(scc.password),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Allow any host key for simplicity
-		Timeout:         scc.connectTimeoutDuration,
-	}
-	client, err := ssh.Dial("tcp", net.JoinHostPort(scc.address, strconv.Itoa(scc.port)), sshConfig)
+	// Open a Telnet (TCP) connection to the switch with a timeout.
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", scc.address, scc.port), scc.connectTimeoutDuration)
 	if err != nil {
-		return "", fmt.Errorf("failed to connect to SSH: %w", err)
+		return "", fmt.Errorf("failed to connect to switch: %w", err)
 	}
-	defer client.Close()
+	defer conn.Close()
 
-	// Create an interactive session to run commands
-	session, err := client.NewSession()
-	if err != nil {
-		return "", fmt.Errorf("failed to create SSH session: %w", err)
-	}
-	defer session.Close()
-
-	// Capture the session output
-	var outputBuffer bytes.Buffer
-	session.Stdout = &outputBuffer
-	session.Stderr = &outputBuffer
-
-	inputPipe, err := session.StdinPipe()
-	if err != nil {
-		return "", fmt.Errorf("failed to create input pipe: %w", err)
-	}
-
-	modes := ssh.TerminalModes{ssh.ECHO: 0}
-	if err := session.RequestPty("vt100", 80, 40, modes); err != nil {
-		return "", fmt.Errorf("failed to configure shell: %w", err)
-	}
-
-	// Launch the switch's interactive shell
-	err = session.Shell()
-	if err != nil {
-		return "", fmt.Errorf("failed to start shell: %w", err)
-	}
-
-	// Submit the commands to the switch
+	// Send the provided commands to the switch (no auth sequence for plain Telnet mock).
+	writer := bufio.NewWriter(conn)
 	for _, command := range commands {
-		if _, err := fmt.Fprintln(inputPipe, command); err != nil {
+		if _, err := writer.WriteString(command + "\n"); err != nil {
 			return "", fmt.Errorf("failed to write command to switch: %w", err)
 		}
 	}
-
-	// Wait for the remote to process the commands and exit the shell
-	done := make(chan error, 1)
-	go func() {
-		done <- session.Wait()
-	}()
-	select {
-	case err := <-done:
-		if err != nil {
-			return "", fmt.Errorf("failed to run command sequence: %w", err)
-		}
-	case <-time.After(scc.configTimeoutDuration):
-		return "", fmt.Errorf("timed out waiting for command sequence to complete")
+	if err := writer.Flush(); err != nil {
+		return "", fmt.Errorf("failed to flush commands to switch: %w", err)
 	}
 
-	return outputBuffer.String(), nil
+	// Close the write side so the server sees EOF and can finish processing.
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		_ = tcpConn.CloseWrite()
+	}
+
+	// Give the device up to the config timeout to respond, then read whatever is available.
+	deadline := time.Now().Add(scc.configTimeoutDuration)
+	if err := conn.SetReadDeadline(deadline); err != nil {
+		return "", fmt.Errorf("failed to set read deadline: %w", err)
+	}
+
+	var reader bytes.Buffer
+	_, err = reader.ReadFrom(conn)
+	if err != nil {
+		// If the read timed out but returned some data, return it; otherwise surface the error.
+		netErr, ok := err.(net.Error)
+		if ok && netErr.Timeout() {
+			if reader.Len() > 0 {
+				return reader.String(), nil
+			}
+			return "", fmt.Errorf("timed out waiting for command sequence to complete")
+		}
+		// If EOF or other error but we have data, return it.
+		if err == io.EOF && reader.Len() > 0 {
+			return reader.String(), nil
+		}
+		return "", err
+	}
+
+	return reader.String(), nil
 }
