@@ -79,20 +79,14 @@ func (hub *Hub) SetDeactivationTime(t time.Time) {
 	hub.DeactivationTime = t
 }
 
-// AutoFuelPoints calculates points from FUEL scored during AUTO. Only counts if HUB is active.
+// AutoFuelPoints calculates points from FUEL scored during AUTO.
 func (hub *Hub) AutoFuelPoints() int {
-	if hub.IsActive {
-		return hub.AutoFuel
-	}
-	return 0
+	return hub.AutoFuel
 }
 
-// TeleopFuelPoints calculates points from FUEL scored during TELEOP. Only counts if HUB is active.
+// TeleopFuelPoints calculates points from FUEL scored during TELEOP.
 func (hub *Hub) TeleopFuelPoints() int {
-	if hub.IsActive {
-		return hub.TeleopFuel
-	}
-	return 0
+	return hub.TeleopFuel
 }
 
 // TotalFuel returns the total FUEL scored across AUTO and TELEOP.

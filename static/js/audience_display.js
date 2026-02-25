@@ -177,8 +177,8 @@ const handleRealtimeScore = function (data) {
   $(`#${blueSide}ScoreNumber`).text(data.Blue.ScoreSummary.Score);
 
   // Update fuel counters for ranking points
-  updateFuelCounter(redSide, data.Red.Score.Hub.TotalFuel);
-  updateFuelCounter(blueSide, data.Blue.Score.Hub.TotalFuel);
+  updateFuelCounter(redSide, data.Red.ScoreSummary.NumFuel);
+  updateFuelCounter(blueSide, data.Blue.ScoreSummary.NumFuel);
 
   // Update hub active indicators
   if (data.Red.Score.Hub.IsActive) {
