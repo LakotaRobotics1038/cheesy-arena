@@ -355,21 +355,29 @@ func (plc *ModbusHubPlc) writeRegisters() bool {
 		return false
 	}
 
-	// Write the light color and animation registers
-	// Start from hubLightRed, write 4 registers: hubLightRed, hubLightGreen, hubLightBlue, hubLedAnimation
-	lightBytes := make([]byte, 8) // 4 registers * 2 bytes each
+	// Write the light color registers (hubLightRed, hubLightGreen, hubLightBlue)
+	lightBytes := make([]byte, 6) // 3 registers * 2 bytes each
 	lightBytes[0] = byte(plc.registers[hubLightRed] >> 8)
 	lightBytes[1] = byte(plc.registers[hubLightRed])
 	lightBytes[2] = byte(plc.registers[hubLightGreen] >> 8)
 	lightBytes[3] = byte(plc.registers[hubLightGreen])
 	lightBytes[4] = byte(plc.registers[hubLightBlue] >> 8)
 	lightBytes[5] = byte(plc.registers[hubLightBlue])
-	lightBytes[6] = byte(plc.registers[hubLedAnimation] >> 8)
-	lightBytes[7] = byte(plc.registers[hubLedAnimation])
 
-	_, err := plc.client.WriteMultipleRegisters(uint16(hubLightRed), 4, lightBytes)
+	_, err := plc.client.WriteMultipleRegisters(uint16(hubLightRed), 3, lightBytes)
 	if err != nil {
 		log.Printf("%s hub PLC error writing registers: %v", plc.allianceName, err)
+		return false
+	}
+
+	// Write the animation register separately
+	animationBytes := make([]byte, 2)
+	animationBytes[0] = byte(plc.registers[hubLedAnimation] >> 8)
+	animationBytes[1] = byte(plc.registers[hubLedAnimation])
+
+	_, err = plc.client.WriteMultipleRegisters(uint16(hubLedAnimation), 1, animationBytes)
+	if err != nil {
+		log.Printf("%s hub PLC error writing animation register: %v", plc.allianceName, err)
 		return false
 	}
 	return true
