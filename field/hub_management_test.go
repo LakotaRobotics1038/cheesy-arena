@@ -166,9 +166,10 @@ func TestHubStatusTiedAutoFuel(t *testing.T) {
 
 	arena.MatchState = TeleopPeriod
 
-	// Should randomly select red or blue when tied
-	// Call with matchTimeSec in transition shift
-	arena.updateHubStatus(27)
+	// Should randomly select red or blue when tied once alliance shifts begin.
+	// transitionShiftStart = 3 + 20 + 2 = 25
+	// transitionShiftEnd = 25 + 10 = 35
+	arena.updateHubStatus(36)
 	// Just verify one was selected (can't test randomness reliably)
 	assert.True(t, arena.autoWinningAlliance == "red" || arena.autoWinningAlliance == "blue")
 }

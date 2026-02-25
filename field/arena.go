@@ -851,25 +851,27 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 			game.MatchTiming.WarningRemainingDurationSec,
 	)
 
-	// Determine which alliance scored more FUEL during AUTO
-	if arena.MatchState == PausePeriod || (arena.MatchState == TeleopPeriod && !arena.autoWinnerDetermined) {
-		if !arena.autoWinnerDetermined {
-			redFuel := arena.RedRealtimeScore.CurrentScore.Hub.AutoFuel
-			blueFuel := arena.BlueRealtimeScore.CurrentScore.Hub.AutoFuel
+	// Determine which alliance scored more FUEL during AUTO.
+	// If still tied, only randomize once the alliance shifts are about to begin.
+	autoComplete := matchTimeSec >= game.GetDurationToAutoEnd().Seconds()
+	if autoComplete && !arena.autoWinnerDetermined {
+		redFuel := arena.RedRealtimeScore.CurrentScore.Hub.AutoFuel
+		blueFuel := arena.BlueRealtimeScore.CurrentScore.Hub.AutoFuel
 
+		if redFuel > blueFuel {
+			arena.autoWinningAlliance = "red"
 			arena.autoWinnerDetermined = true
-			if redFuel > blueFuel {
+		} else if blueFuel > redFuel {
+			arena.autoWinningAlliance = "blue"
+			arena.autoWinnerDetermined = true
+		} else if matchTimeSec >= transitionShiftEnd {
+			// If tied at the end of AUTO, randomly select per FMS behavior.
+			if rand.Intn(2) == 0 {
 				arena.autoWinningAlliance = "red"
-			} else if blueFuel > redFuel {
-				arena.autoWinningAlliance = "blue"
 			} else {
-				// If tied, randomly select per FMS behavior
-				if rand.Intn(2) == 0 {
-					arena.autoWinningAlliance = "red"
-				} else {
-					arena.autoWinningAlliance = "blue"
-				}
+				arena.autoWinningAlliance = "blue"
 			}
+			arena.autoWinnerDetermined = true
 		}
 	}
 
@@ -998,9 +1000,8 @@ func (arena *Arena) updateHubTransitionAnimation(usePulsing bool) {
 		return
 	}
 
-	// Determine which alliance will be inactive during shift 0 (first shift after transition)
-	// If red won AUTO, red is active during even shifts (0, 2) and blue during odd shifts (1, 3)
-	// So blue will be inactive during shift 0
+	// Determine which alliance will be inactive during shift 0 (first shift after transition).
+	// The AUTO winner is inactive in shift 0, then alternates each shift.
 	var inactiveAllianceDuringShift0 string
 	if arena.autoWinningAlliance == "red" {
 		inactiveAllianceDuringShift0 = "red"
