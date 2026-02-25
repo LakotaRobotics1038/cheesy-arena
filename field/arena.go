@@ -669,9 +669,6 @@ func (arena *Arena) Update() {
 			arena.MatchState = WarmupPeriod
 			enabled = false
 			sendDsPacket = false
-			// Ensure hubs are active at the start of auto
-			arena.RedRealtimeScore.CurrentScore.Hub.Activate()
-			arena.BlueRealtimeScore.CurrentScore.Hub.Activate()
 		} else {
 			arena.MatchState = AutoPeriod
 			enabled = true
@@ -685,14 +682,14 @@ func (arena *Arena) Update() {
 	case WarmupPeriod:
 		auto = true
 		enabled = false
-		// Ensure hubs are active at the start of auto
-		arena.RedRealtimeScore.CurrentScore.Hub.Activate()
-		arena.BlueRealtimeScore.CurrentScore.Hub.Activate()
 		if matchTimeSec >= float64(game.MatchTiming.WarmupDurationSec) {
 			arena.MatchState = AutoPeriod
 			auto = true
 			enabled = true
 			sendDsPacket = true
+			// Activate hubs when transitioning to AutoPeriod
+			arena.setHubActive("red", true, false)
+			arena.setHubActive("blue", true, false)
 		}
 	case AutoPeriod:
 		auto = true
@@ -878,11 +875,14 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 
 	// Update hub status based on current match phase
 	// matchTimeSec counts up from 0 at match start
-	if arena.MatchState == PreMatch || arena.MatchState == StartMatch || arena.MatchState == WarmupPeriod ||
-		arena.MatchState == AutoPeriod {
+	if arena.MatchState == AutoPeriod {
 		// AUTO: both hubs active
 		arena.setHubActive("red", true, false)
 		arena.setHubActive("blue", true, false)
+	} else if arena.MatchState == PreMatch || arena.MatchState == WarmupPeriod || arena.MatchState == PausePeriod {
+		// Before or between match periods: hubs inactive
+		arena.setHubActive("red", false, false)
+		arena.setHubActive("blue", false, false)
 	} else if arena.MatchState == TeleopPeriod && matchTimeSec < transitionShiftEnd {
 		// TRANSITION SHIFT (first 10 seconds of teleop): both hubs active
 		arena.currentAllianceShift = -1 // Reset for alliance shifts

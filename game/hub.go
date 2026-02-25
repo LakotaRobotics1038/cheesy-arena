@@ -24,7 +24,7 @@ func NewHub() *Hub {
 		LEDCyclePeriod: 5 * time.Second,
 		LEDState:       false,
 		LastLEDToggle:  time.Now(),
-		IsActive:       true,
+		IsActive:       false,
 	}
 }
 
