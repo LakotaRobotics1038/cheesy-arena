@@ -1418,7 +1418,27 @@ func (arena *Arena) handlePlcInputOutput() {
 	// Get all the game-specific inputs and update the score.
 	if arena.MatchState == AutoPeriod || arena.MatchState == PausePeriod || arena.MatchState == TeleopPeriod ||
 		inGracePeriod {
-		//TODO: get scores from hubs
+		// Read ball counts from hub PLCs and update scores
+		if arena.RedHubPlc.IsEnabled() {
+			hubCount := arena.RedHubPlc.GetHubCount()
+			if arena.MatchState == AutoPeriod {
+				redScore.Hub.AutoFuel = hubCount
+			} else {
+				// During teleop, pause, or grace period, update TeleopFuel
+				// TeleopFuel should be total minus auto
+				redScore.Hub.TeleopFuel = hubCount - redScore.Hub.AutoFuel
+			}
+		}
+		if arena.BlueHubPlc.IsEnabled() {
+			hubCount := arena.BlueHubPlc.GetHubCount()
+			if arena.MatchState == AutoPeriod {
+				blueScore.Hub.AutoFuel = hubCount
+			} else {
+				// During teleop, pause, or grace period, update TeleopFuel
+				// TeleopFuel should be total minus auto
+				blueScore.Hub.TeleopFuel = hubCount - blueScore.Hub.AutoFuel
+			}
+		}
 	}
 	if !oldRedScore.Equals(redScore) || !oldBlueScore.Equals(blueScore) {
 		arena.RealtimeScoreNotifier.Notify()
