@@ -786,11 +786,7 @@ func (arena *Arena) Update() {
 
 	// Handle hub lights on PLC (including 3-second deactivation delay)
 	arena.updateHubLights()
-	if arena.FieldReset {
-		// Turn hub lights green when field reset is active
-		arena.RedHubPlc.SetHubLightColor(0, 255, 0)
-		arena.BlueHubPlc.SetHubLightColor(0, 255, 0)
-	} else if arena.MatchState == TeleopPeriod {
+	if arena.MatchState == TeleopPeriod {
 		// Calculate transition period timing
 		transitionShiftStart := float64(
 			game.MatchTiming.WarmupDurationSec + game.MatchTiming.AutoDurationSec + game.MatchTiming.PauseDurationSec,
@@ -798,16 +794,16 @@ func (arena *Arena) Update() {
 		transitionShiftEnd := transitionShiftStart + float64(game.MatchTiming.TransitionDurationSec)
 
 		if matchTimeSec < transitionShiftEnd {
-			// During transition period: show chaser animation for the alliance that will be inactive in shift 0
-			arena.updateHubTransitionAnimation()
+			// During transition period: show warning animation for the alliance that will be inactive in shift 0
+			arena.updateHubTransitionAnimation(transitionShiftEnd-matchTimeSec <= 3)
 		} else {
 			// During alliance shifts: normal RGB color control
-			arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
-			arena.BlueHubPlc.SetHubLight(arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
+			arena.setHubLightWithWarning("red", arena.RedHubPlc, &arena.RedRealtimeScore.CurrentScore.Hub, now)
+			arena.setHubLightWithWarning("blue", arena.BlueHubPlc, &arena.BlueRealtimeScore.CurrentScore.Hub, now)
 		}
 	} else if arena.MatchState == AutoPeriod {
-		arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
-		arena.BlueHubPlc.SetHubLight(arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
+		arena.setHubLightWithWarning("red", arena.RedHubPlc, &arena.RedRealtimeScore.CurrentScore.Hub, now)
+		arena.setHubLightWithWarning("blue", arena.BlueHubPlc, &arena.BlueRealtimeScore.CurrentScore.Hub, now)
 	} else if arena.MatchState == PausePeriod {
 		// Turn off lights during pause period
 		arena.RedHubPlc.SetHubLight(false)
@@ -901,7 +897,8 @@ func (arena *Arena) updateHubStatus(matchTimeSec float64) {
 
 		// Set deactivation time to 3 seconds before end of shift for LED warning
 		// At 22 seconds into the shift, set deactivation time to 3 seconds from now (at end of shift)
-		if secIntoCurrentShift == game.MatchTiming.AllianceShiftDurationSec-3 {
+		if secIntoCurrentShift == game.MatchTiming.AllianceShiftDurationSec-3 &&
+			matchTimeSec+3 < endGameStart {
 			if redActive {
 				arena.RedRealtimeScore.CurrentScore.Hub.SetDeactivationTime(time.Now().Add(3 * time.Second))
 			} else {
@@ -975,8 +972,8 @@ func (arena *Arena) updateHubLights() {
 }
 
 // updateHubTransitionAnimation sets the LED animations during the transition period.
-// The alliance that will be inactive during the first alliance shift shows the chaser animation.
-func (arena *Arena) updateHubTransitionAnimation() {
+// The alliance that will be inactive during the first alliance shift shows the warning animation.
+func (arena *Arena) updateHubTransitionAnimation(usePulsing bool) {
 	if !arena.autoWinnerDetermined {
 		// If we haven't determined the winner yet, default to normal lights
 		arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
@@ -989,19 +986,47 @@ func (arena *Arena) updateHubTransitionAnimation() {
 	// So blue will be inactive during shift 0
 	var inactiveAllianceDuringShift0 string
 	if arena.autoWinningAlliance == "red" {
-		inactiveAllianceDuringShift0 = "blue"
-	} else {
 		inactiveAllianceDuringShift0 = "red"
+	} else {
+		inactiveAllianceDuringShift0 = "blue"
 	}
 
-	// Set chaser animation for the alliance that will be inactive, normal light for the active one
+	// Set warning animation for the alliance that will be inactive, normal light for the active one
 	if inactiveAllianceDuringShift0 == "red" {
-		arena.RedHubPlc.SetHubChaserAnimation()
+		if usePulsing {
+			arena.RedHubPlc.SetHubAnimation(plc.AnimationRedPulsing)
+		} else {
+			arena.RedHubPlc.SetHubChaserAnimation()
+		}
 		arena.BlueHubPlc.SetHubLight(arena.BlueRealtimeScore.CurrentScore.Hub.LEDState)
 	} else {
 		arena.RedHubPlc.SetHubLight(arena.RedRealtimeScore.CurrentScore.Hub.LEDState)
-		arena.BlueHubPlc.SetHubChaserAnimation()
+		if usePulsing {
+			arena.BlueHubPlc.SetHubAnimation(plc.AnimationBluePulsing)
+		} else {
+			arena.BlueHubPlc.SetHubChaserAnimation()
+		}
 	}
+}
+
+// setHubLightWithWarning uses pulsing animation during the deactivation warning window.
+func (arena *Arena) setHubLightWithWarning(alliance string, hubPlc plc.HubPlc, hub *game.Hub, now time.Time) {
+	if !hub.IsActive {
+		hubPlc.SetHubLight(false)
+		return
+	}
+
+	if !hub.DeactivationTime.IsZero() && now.Before(hub.DeactivationTime) &&
+		hub.DeactivationTime.Sub(now) <= 3*time.Second {
+		if alliance == "red" {
+			hubPlc.SetHubAnimation(plc.AnimationRedPulsing)
+		} else {
+			hubPlc.SetHubAnimation(plc.AnimationBluePulsing)
+		}
+		return
+	}
+
+	hubPlc.SetHubLight(hub.LEDState)
 }
 
 // Checks if the endgame warning period has started and triggers the Companion event if so.
@@ -1370,6 +1395,16 @@ func (arena *Arena) handlePlcInputOutput() {
 	case PostMatch:
 		if arena.FieldReset {
 			arena.MainPlc.SetFieldResetLight(true)
+		}
+		if arena.FieldReset {
+			arena.RedHubPlc.SetHubLightColor(0, 255, 0)
+			arena.BlueHubPlc.SetHubLightColor(0, 255, 0)
+		} else if arena.AllianceStationDisplayMode == "signalCount" {
+			arena.RedHubPlc.SetHubLightColor(255, 0, 255)
+			arena.BlueHubPlc.SetHubLightColor(255, 0, 255)
+		} else {
+			arena.RedHubPlc.SetHubLight(false)
+			arena.BlueHubPlc.SetHubLight(false)
 		}
 		scoreReady := arena.RedRealtimeScore.FoulsCommitted && arena.BlueRealtimeScore.FoulsCommitted &&
 			arena.positionPostMatchScoreReady("red") && arena.positionPostMatchScoreReady("blue")
