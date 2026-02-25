@@ -135,8 +135,16 @@ func TestScoringPanelWebsocket(t *testing.T) {
 	readWebsocketType(t, redWs, "realtimeScore")
 	readWebsocketType(t, blueWs, "matchLoad")
 	readWebsocketType(t, blueWs, "realtimeScore")
-	assert.Equal(t, field.NewRealtimeScore(), web.arena.RedRealtimeScore)
-	assert.Equal(t, field.NewRealtimeScore(), web.arena.BlueRealtimeScore)
+	// LastLEDToggle can vary slightly depending on timing; zero it out for a
+	// stable comparison of the remaining fields.
+	web.arena.RedRealtimeScore.CurrentScore.Hub.LastLEDToggle = time.Time{}
+	web.arena.BlueRealtimeScore.CurrentScore.Hub.LastLEDToggle = time.Time{}
+	expectedRed := field.NewRealtimeScore()
+	expectedBlue := field.NewRealtimeScore()
+	expectedRed.CurrentScore.Hub.LastLEDToggle = time.Time{}
+	expectedBlue.CurrentScore.Hub.LastLEDToggle = time.Time{}
+	assert.Equal(t, expectedRed, web.arena.RedRealtimeScore)
+	assert.Equal(t, expectedBlue, web.arena.BlueRealtimeScore)
 	assert.Equal(t, 0, web.arena.ScoringPanelRegistry.GetNumScoreCommitted("red"))
 	assert.Equal(t, 0, web.arena.ScoringPanelRegistry.GetNumScoreCommitted("blue"))
 }
