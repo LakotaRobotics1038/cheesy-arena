@@ -669,6 +669,9 @@ func (arena *Arena) Update() {
 			arena.MatchState = WarmupPeriod
 			enabled = false
 			sendDsPacket = false
+			// Ensure hubs are active at the start of auto
+			arena.RedRealtimeScore.CurrentScore.Hub.Activate()
+			arena.BlueRealtimeScore.CurrentScore.Hub.Activate()
 		} else {
 			arena.MatchState = AutoPeriod
 			enabled = true
@@ -682,6 +685,9 @@ func (arena *Arena) Update() {
 	case WarmupPeriod:
 		auto = true
 		enabled = false
+		// Ensure hubs are active at the start of auto
+		arena.RedRealtimeScore.CurrentScore.Hub.Activate()
+		arena.BlueRealtimeScore.CurrentScore.Hub.Activate()
 		if matchTimeSec >= float64(game.MatchTiming.WarmupDurationSec) {
 			arena.MatchState = AutoPeriod
 			auto = true
